@@ -1,8 +1,8 @@
 use ratatui::{
     Frame,
-    layout::{Constraint, Direction, Layout},
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    widgets::{Block, Borders, Paragraph, Tabs},
+    widgets::{Block, Borders, List, ListItem, Paragraph, Tabs},
 };
 
 use crate::app::{App, Tab};
@@ -45,6 +45,34 @@ fn draw_tabs(f: &mut Frame, area: ratatui::layout::Rect, app: &App) {
     f.render_widget(tabs, area);
 }
 
+fn draw_containers(f: &mut Frame, area: Rect, app: &App) {
+    let mut items: Vec<ListItem> = Vec::new();
+
+    if app.loading {
+        items.push(ListItem::new("⏳ Loading..."));
+    } else if app.containers.is_empty() {
+        items.push(ListItem::new("No containers. Press 'r' to run a job."));
+    } else {
+        for container in &app.containers {
+            let status_icon = match container.status.as_str() {
+                "running" => "running",
+                "success" => "success",
+                "failed" => "failed",
+                _ => "wait",
+            };
+            let display = format!(
+                "{} {} [{}]",
+                status_icon, container.name, container.dockerfile
+            );
+            items.push(ListItem::new(display));
+        }
+    }
+
+    let list = List::new(items).highlight_style(Style::default().add_modifier(Modifier::BOLD));
+
+    f.render_widget(list, area);
+}
+
 fn draw_content(f: &mut Frame, area: ratatui::layout::Rect, app: &App) {
     let title = match app.current_tab {
         Tab::Containers => "Containers",
@@ -56,11 +84,29 @@ fn draw_content(f: &mut Frame, area: ratatui::layout::Rect, app: &App) {
 
     let block = Block::default().borders(Borders::ALL).title(title);
 
-    f.render_widget(block, area);
+    f.render_widget(block.clone(), area);
+
+    let inner = block.inner(area);
+
+    match app.current_tab {
+        Tab::Containers => draw_containers(f, inner, app),
+        Tab::Images => {
+            //
+        }
+        Tab::Deployments => {
+            //
+        }
+        Tab::Logs => {
+            //
+        }
+        Tab::Settings => {
+            //
+        }
+    }
 }
 
 fn draw_footer(f: &mut Frame, area: ratatui::layout::Rect) {
-    let footer = Paragraph::new("q: Quit | Tab: Next | Shift+Tab: Prev")
+    let footer = Paragraph::new("q: Quit | r: Run Job | Tab: Next | Shift+Tab: Prev")
         .block(Block::default().borders(Borders::ALL));
 
     f.render_widget(footer, area);

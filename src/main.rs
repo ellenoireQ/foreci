@@ -8,11 +8,13 @@ use crossterm::{
 };
 use ratatui::{Terminal, backend::CrosstermBackend};
 use std::io;
+use std::time::Duration;
 
 use app::App;
 use ui::draw_ui;
 
-fn main() -> io::Result<()> {
+#[tokio::main]
+async fn main() -> io::Result<()> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen)?;
@@ -24,13 +26,18 @@ fn main() -> io::Result<()> {
     loop {
         terminal.draw(|f| draw_ui(f, &mut app))?;
 
-        if let Event::Key(key) = event::read()? {
-            if key.kind == KeyEventKind::Press {
-                match key.code {
-                    KeyCode::Char('q') => break,
-                    KeyCode::Tab => app.next_tab(),
-                    KeyCode::BackTab => app.prev_tab(),
-                    _ => {}
+        if event::poll(Duration::from_millis(100))? {
+            if let Event::Key(key) = event::read()? {
+                if key.kind == KeyEventKind::Press {
+                    match key.code {
+                        KeyCode::Char('q') => break,
+                        KeyCode::Char('r') | KeyCode::Char('R') => {
+                            app.fetch_containers().await;
+                        }
+                        KeyCode::Tab => app.next_tab(),
+                        KeyCode::BackTab => app.prev_tab(),
+                        _ => {}
+                    }
                 }
             }
         }
