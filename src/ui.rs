@@ -45,7 +45,7 @@ fn draw_tabs(f: &mut Frame, area: ratatui::layout::Rect, app: &App) {
     f.render_widget(tabs, area);
 }
 
-fn draw_containers(f: &mut Frame, area: Rect, app: &App) {
+fn draw_containers(f: &mut Frame, area: Rect, app: &mut App) {
     let mut items: Vec<ListItem> = Vec::new();
 
     if app.loading {
@@ -68,12 +68,18 @@ fn draw_containers(f: &mut Frame, area: Rect, app: &App) {
         }
     }
 
-    let list = List::new(items).highlight_style(Style::default().add_modifier(Modifier::BOLD));
+    let list = List::new(items)
+        .highlight_style(
+            Style::default()
+                .bg(Color::DarkGray)
+                .add_modifier(Modifier::BOLD),
+        )
+        .highlight_symbol("→ ");
 
-    f.render_widget(list, area);
+    f.render_stateful_widget(list, area, &mut app.container_state);
 }
 
-fn draw_content(f: &mut Frame, area: ratatui::layout::Rect, app: &App) {
+fn draw_content(f: &mut Frame, area: ratatui::layout::Rect, app: &mut App) {
     let title = match app.current_tab {
         Tab::Containers => "Containers",
         Tab::Images => "Images",
@@ -106,8 +112,10 @@ fn draw_content(f: &mut Frame, area: ratatui::layout::Rect, app: &App) {
 }
 
 fn draw_footer(f: &mut Frame, area: ratatui::layout::Rect) {
-    let footer = Paragraph::new("q: Quit | r: Run Job | Tab: Next | Shift+Tab: Prev")
-        .block(Block::default().borders(Borders::ALL));
+    let footer = Paragraph::new(
+        "q: Quit | r: Run Job | Tab: Next | Shift+Tab: Prev | ↕ or k/j : Select List",
+    )
+    .block(Block::default().borders(Borders::ALL));
 
     f.render_widget(footer, area);
 }

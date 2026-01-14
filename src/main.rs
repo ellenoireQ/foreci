@@ -21,7 +21,7 @@ async fn main() -> io::Result<()> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let mut app = App::new();
+    let mut app = App::default();
 
     loop {
         terminal.draw(|f| draw_ui(f, &mut app))?;
@@ -36,6 +36,9 @@ async fn main() -> io::Result<()> {
                         }
                         KeyCode::Tab => app.next_tab(),
                         KeyCode::BackTab => app.prev_tab(),
+                        KeyCode::Char('d') => app.delete().await,
+                        KeyCode::Up | KeyCode::Char('k') => app.select_prev_container(),
+                        KeyCode::Down | KeyCode::Char('j') => app.select_next_container(),
                         _ => {}
                     }
                 }

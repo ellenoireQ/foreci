@@ -1,3 +1,4 @@
+use ratatui::widgets::ListState;
 use serde::Deserialize;
 use std::process::Stdio;
 use tokio::process::Command;
@@ -21,18 +22,49 @@ pub struct Container {
 pub struct App {
     pub current_tab: Tab,
     pub containers: Vec<Container>,
+    pub container_state: ListState,
     pub loading: bool,
+    pub image_list: ImageList,
 }
 
-impl App {
-    pub fn new() -> Self {
+pub struct ImageList {
+    pub items: Vec<Container>,
+    pub state: ListState,
+}
+impl Default for App {
+    fn default() -> Self {
         Self {
             current_tab: Tab::Containers,
             containers: Vec::new(),
+            container_state: ListState::default(),
             loading: false,
+            image_list: ImageList::from_iter([]),
         }
     }
+}
 
+impl FromIterator<(&'static str, &'static str, &'static str)> for ImageList {
+    fn from_iter<I: IntoIterator<Item = (&'static str, &'static str, &'static str)>>(
+        iter: I,
+    ) -> Self {
+        let items = iter
+            .into_iter()
+            .map(|(name, dockerfile, status)| Container::new(name, dockerfile, status))
+            .collect();
+        let state = ListState::default();
+        Self { items, state }
+    }
+}
+impl Container {
+    fn new(name: &str, dockerfile: &str, status: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            dockerfile: dockerfile.to_string(),
+            status: status.to_string(),
+        }
+    }
+}
+impl App {
     pub async fn fetch_containers(&mut self) {
         self.loading = true;
         self.containers.clear();
@@ -73,5 +105,62 @@ impl App {
             Tab::Logs => Tab::Deployments,
             Tab::Settings => Tab::Logs,
         };
+    }
+
+    pub async fn delete(&mut self) {
+        self.containers.pop();
+    }
+
+    pub fn select_next_container(&mut self) {
+        if self.containers.is_empty() {
+            return;
+        }
+        let i = match self.container_state.selected() {
+            Some(i) => {
+                if i >= self.containers.len() - 1 {
+                    0
+                } else {
+                    i + 1
+                }
+            }
+            None => 0,
+        };
+        self.container_state.select(Some(i));
+    }
+
+    pub fn select_prev_container(&mut self) {
+        if self.containers.is_empty() {
+            return;
+        }
+        let i = match self.container_state.selected() {
+            Some(i) => {
+                if i == 0 {
+                    self.containers.len() - 1
+                } else {
+                    i - 1
+                }
+            }
+            None => self.containers.len() - 1,
+        };
+        self.container_state.select(Some(i));
+    }
+
+    fn select_none(&mut self) {
+        self.image_list.state.select(None);
+    }
+
+    fn select_next(&mut self) {
+        self.image_list.state.select_next();
+    }
+    fn select_previous(&mut self) {
+        self.image_list.state.select_previous();
+    }
+
+    fn select_first(&mut self) {
+        self.image_list.state.select_first();
+    }
+
+    fn select_last(&mut self) {
+        self.image_list.state.select_last();
     }
 }
