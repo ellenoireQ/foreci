@@ -1,5 +1,9 @@
 package main
 
+import (
+	"foreci/runner/cmd"
+)
+
 func main() {
-	return;
+	cmd.Execute()
 }
