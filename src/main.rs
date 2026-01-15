@@ -24,12 +24,25 @@ async fn main() -> io::Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     let mut app = App::default();
+
+    app.loading = true;
+    app.log
+        .print_mes(LogType::Info, "Fetching Containers")
+        .await;
+    terminal.draw(|f| draw_ui(f, &mut app))?;
+
+    app.fetch_containers().await;
+    if !app.loading {
+        app.log.print_mes(LogType::Info, "Container loaded").await;
+    } else {
+        app.log
+            .print_mes(LogType::Error, "Failed to fetching container")
+            .await;
+    }
+
     loop {
         terminal.draw(|f| draw_ui(f, &mut app))?;
 
-        // Auto fetch while app starting up
-        app.fetch_containers().await;
-        app.log.print_mes(LogType::Info, "message").await;
         if event::poll(Duration::from_millis(100))? {
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
