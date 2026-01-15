@@ -40,7 +40,7 @@ impl LogList {
             status: matching.to_string(),
             message: message.to_string(),
         };
-        if (self.log.is_empty()) {
+        if self.log.is_empty() {
             self.log.push(ul);
         } else {
             self.log.pop();
