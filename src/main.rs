@@ -22,10 +22,11 @@ async fn main() -> io::Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     let mut app = App::default();
-
     loop {
         terminal.draw(|f| draw_ui(f, &mut app))?;
 
+        // Auto fetch while app starting up
+        app.fetch_containers().await;
         if event::poll(Duration::from_millis(100))? {
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
