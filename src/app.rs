@@ -24,7 +24,6 @@ pub struct App {
     pub containers: Vec<Container>,
     pub container_state: ListState,
     pub loading: bool,
-    pub image_list: ImageList,
 }
 
 pub struct ImageList {
@@ -38,32 +37,10 @@ impl Default for App {
             containers: Vec::new(),
             container_state: ListState::default(),
             loading: false,
-            image_list: ImageList::from_iter([]),
         }
     }
 }
 
-impl FromIterator<(&'static str, &'static str, &'static str)> for ImageList {
-    fn from_iter<I: IntoIterator<Item = (&'static str, &'static str, &'static str)>>(
-        iter: I,
-    ) -> Self {
-        let items = iter
-            .into_iter()
-            .map(|(name, dockerfile, status)| Container::new(name, dockerfile, status))
-            .collect();
-        let state = ListState::default();
-        Self { items, state }
-    }
-}
-impl Container {
-    fn new(name: &str, dockerfile: &str, status: &str) -> Self {
-        Self {
-            name: name.to_string(),
-            dockerfile: dockerfile.to_string(),
-            status: status.to_string(),
-        }
-    }
-}
 impl App {
     pub async fn fetch_containers(&mut self) {
         self.loading = true;
@@ -143,24 +120,5 @@ impl App {
             None => self.containers.len() - 1,
         };
         self.container_state.select(Some(i));
-    }
-
-    fn select_none(&mut self) {
-        self.image_list.state.select(None);
-    }
-
-    fn select_next(&mut self) {
-        self.image_list.state.select_next();
-    }
-    fn select_previous(&mut self) {
-        self.image_list.state.select_previous();
-    }
-
-    fn select_first(&mut self) {
-        self.image_list.state.select_first();
-    }
-
-    fn select_last(&mut self) {
-        self.image_list.state.select_last();
     }
 }
