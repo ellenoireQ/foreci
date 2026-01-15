@@ -7,7 +7,6 @@ use ratatui::{
 
 use crate::{
     app::{App, Tab},
-    log::log::{Log, LogList},
 };
 
 pub fn draw_ui(f: &mut Frame, app: &mut App) {
@@ -128,7 +127,6 @@ fn draw_content(f: &mut Frame, area: ratatui::layout::Rect, app: &mut App) {
 }
 
 fn draw_footer(f: &mut Frame, area: ratatui::layout::Rect, app: &App) {
-    let mut items: Vec<ListItem> = Vec::new();
 
     let footer = Paragraph::new(
         "q: Quit | r: Run Job | Tab: Next | Shift+Tab: Prev | ↕ or k/j : Select List",

@@ -3,7 +3,7 @@ use serde::Deserialize;
 use std::process::Stdio;
 use tokio::process::Command;
 
-use crate::log::log::{Log, LogList, LogType};
+use crate::log::log::{LogList, LogType};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Tab {
@@ -38,10 +38,6 @@ pub struct App {
     pub menu_selection: usize,
 }
 
-pub struct ImageList {
-    pub items: Vec<Container>,
-    pub state: ListState,
-}
 impl Default for App {
     fn default() -> Self {
         Self {
