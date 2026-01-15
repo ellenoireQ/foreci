@@ -29,7 +29,7 @@ async fn main() -> io::Result<()> {
 
         // Auto fetch while app starting up
         app.fetch_containers().await;
-        app.log.print_mes(LogType::Info, "message");
+        app.log.print_mes(LogType::Info, "message").await;
         if event::poll(Duration::from_millis(100))? {
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {

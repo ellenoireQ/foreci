@@ -30,7 +30,7 @@ impl Default for LogList {
 }
 
 impl LogList {
-    pub fn print_mes(&mut self, status: LogType, message: &str) {
+    pub async fn print_mes(&mut self, status: LogType, message: &str) {
         let matching = match status {
             LogType::Info => "[Info]",
             LogType::Error => "[Error]",
