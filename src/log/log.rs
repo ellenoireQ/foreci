@@ -1,7 +1,3 @@
-use std::ptr::null;
-
-use tokio::time::error::Elapsed;
-
 pub enum LogType {
     Info,
     Error,
@@ -15,16 +11,16 @@ pub struct Log {
 }
 
 pub struct LogList {
-    log: Vec<Log>,
+    log: Log,
 }
 
 impl Default for LogList {
     fn default() -> Self {
         Self {
-            log: vec![Log {
+            log: Log {
                 status: "".to_string(),
                 message: "".to_string(),
-            }],
+            },
         }
     }
 }
@@ -36,27 +32,17 @@ impl LogList {
             LogType::Error => "[Error]",
             LogType::Warning => "[Warning]",
         };
-        let ul = Log {
+        self.log = Log {
             status: matching.to_string(),
             message: message.to_string(),
         };
-        if self.log.is_empty() {
-            self.log.push(ul);
-        } else {
-            self.log.pop();
-        }
-    }
-
-    pub fn get_logs(&self) -> &Vec<Log> {
-        &self.log
     }
 
     pub fn to_display_string(&self) -> String {
-        self.log
-            .iter()
-            .filter(|l| !l.status.is_empty() || !l.message.is_empty())
-            .map(|l| format!("{} {}", l.status, l.message))
-            .collect::<Vec<_>>()
-            .join(" | ")
+        if self.log.status.is_empty() && self.log.message.is_empty() {
+            String::new()
+        } else {
+            format!("{} {}", self.log.status, self.log.message)
+        }
     }
 }
