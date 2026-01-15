@@ -5,7 +5,10 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, Paragraph, Tabs},
 };
 
-use crate::app::{App, Tab};
+use crate::{
+    app::{App, Tab},
+    log::log::{Log, LogList},
+};
 
 pub fn draw_ui(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
@@ -19,7 +22,7 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
 
     draw_tabs(f, chunks[0], app);
     draw_content(f, chunks[1], app);
-    draw_footer(f, chunks[2]);
+    draw_footer(f, chunks[2], app);
 }
 
 fn draw_tabs(f: &mut Frame, area: ratatui::layout::Rect, app: &App) {
@@ -111,11 +114,22 @@ fn draw_content(f: &mut Frame, area: ratatui::layout::Rect, app: &mut App) {
     }
 }
 
-fn draw_footer(f: &mut Frame, area: ratatui::layout::Rect) {
+fn draw_footer(f: &mut Frame, area: ratatui::layout::Rect, app: &App) {
+    let mut items: Vec<ListItem> = Vec::new();
+
     let footer = Paragraph::new(
         "q: Quit | r: Run Job | Tab: Next | Shift+Tab: Prev | ↕ or k/j : Select List",
     )
     .block(Block::default().borders(Borders::ALL));
 
-    f.render_widget(footer, area);
+    let terus = app.log.to_display_string();
+    let footer1 = Paragraph::new(terus).block(Block::default().borders(Borders::ALL).title("Logs"));
+
+    let row = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .split(area);
+
+    f.render_widget(footer, row[0]);
+    f.render_widget(footer1, row[1]);
 }

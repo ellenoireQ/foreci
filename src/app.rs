@@ -3,6 +3,8 @@ use serde::Deserialize;
 use std::process::Stdio;
 use tokio::process::Command;
 
+use crate::log::log::{Log, LogList, LogType};
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Tab {
     Containers,
@@ -24,6 +26,7 @@ pub struct App {
     pub containers: Vec<Container>,
     pub container_state: ListState,
     pub loading: bool,
+    pub log: LogList,
 }
 
 pub struct ImageList {
@@ -37,6 +40,7 @@ impl Default for App {
             containers: Vec::new(),
             container_state: ListState::default(),
             loading: false,
+            log: LogList::default(),
         }
     }
 }

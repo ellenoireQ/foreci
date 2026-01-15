@@ -1,6 +1,6 @@
 mod app;
+mod log;
 mod ui;
-
 use crossterm::{
     event::{self, Event, KeyCode, KeyEventKind},
     execute,
@@ -12,6 +12,8 @@ use std::time::Duration;
 
 use app::App;
 use ui::draw_ui;
+
+use crate::log::log::LogType;
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
@@ -27,6 +29,7 @@ async fn main() -> io::Result<()> {
 
         // Auto fetch while app starting up
         app.fetch_containers().await;
+        app.log.print_mes(LogType::Info, "message");
         if event::poll(Duration::from_millis(100))? {
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
