@@ -14,6 +14,13 @@ pub enum Tab {
     Settings,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum MenuAction {
+    Start,
+    Stop,
+    Delete,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct Container {
     pub name: String,
@@ -27,6 +34,8 @@ pub struct App {
     pub container_state: ListState,
     pub loading: bool,
     pub log: LogList,
+    pub expanded_index: Option<usize>,
+    pub menu_selection: usize,
 }
 
 pub struct ImageList {
@@ -41,6 +50,8 @@ impl Default for App {
             container_state: ListState::default(),
             loading: false,
             log: LogList::default(),
+            expanded_index: None,
+            menu_selection: 0,
         }
     }
 }
@@ -124,5 +135,81 @@ impl App {
             None => self.containers.len() - 1,
         };
         self.container_state.select(Some(i));
+    }
+
+    pub fn toggle_expand(&mut self) {
+        if let Some(selected) = self.container_state.selected() {
+            if self.expanded_index == Some(selected) {
+                self.expanded_index = None;
+                self.menu_selection = 0;
+            } else {
+                self.expanded_index = Some(selected);
+                self.menu_selection = 0;
+            }
+        }
+    }
+
+    pub fn menu_next(&mut self) {
+        if self.expanded_index.is_some() {
+            self.menu_selection = (self.menu_selection + 1) % 3;
+        }
+    }
+
+    pub fn menu_prev(&mut self) {
+        if self.expanded_index.is_some() {
+            self.menu_selection = if self.menu_selection == 0 {
+                2
+            } else {
+                self.menu_selection - 1
+            };
+        }
+    }
+
+    pub fn get_menu_action(&self) -> Option<MenuAction> {
+        if self.expanded_index.is_some() {
+            Some(match self.menu_selection {
+                0 => MenuAction::Start,
+                1 => MenuAction::Stop,
+                _ => MenuAction::Delete,
+            })
+        } else {
+            None
+        }
+    }
+
+    pub async fn execute_menu_action(&mut self) {
+        if let Some(idx) = self.expanded_index {
+            if idx < self.containers.len() {
+                let action = self.get_menu_action();
+                let container_name = self.containers[idx].name.clone();
+
+                match action {
+                    Some(MenuAction::Start) => {
+                        self.log
+                            .print_mes(LogType::Info, &format!("Starting: {}", container_name))
+                            .await;
+                    }
+                    Some(MenuAction::Stop) => {
+                        self.log
+                            .print_mes(LogType::Info, &format!("Stopping: {}", container_name))
+                            .await;
+                    }
+                    Some(MenuAction::Delete) => {
+                        self.log
+                            .print_mes(LogType::Info, &format!("Deleting: {}", container_name))
+                            .await;
+                        self.containers.remove(idx);
+                        if self.containers.is_empty() {
+                            self.container_state.select(None);
+                        } else if idx >= self.containers.len() {
+                            self.container_state.select(Some(self.containers.len() - 1));
+                        }
+                    }
+                    None => {}
+                }
+                self.expanded_index = None;
+                self.menu_selection = 0;
+            }
+        }
     }
 }

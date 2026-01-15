@@ -54,8 +54,33 @@ async fn main() -> io::Result<()> {
                         KeyCode::Tab => app.next_tab(),
                         KeyCode::BackTab => app.prev_tab(),
                         KeyCode::Char('d') => app.delete().await,
-                        KeyCode::Up | KeyCode::Char('k') => app.select_prev_container(),
-                        KeyCode::Down | KeyCode::Char('j') => app.select_next_container(),
+                        KeyCode::Up | KeyCode::Char('k') => {
+                            if app.expanded_index.is_some() {
+                                app.menu_prev();
+                            } else {
+                                app.select_prev_container();
+                            }
+                        }
+                        KeyCode::Down | KeyCode::Char('j') => {
+                            if app.expanded_index.is_some() {
+                                app.menu_next();
+                            } else {
+                                app.select_next_container();
+                            }
+                        }
+                        KeyCode::Enter => {
+                            if app.expanded_index.is_some() {
+                                app.execute_menu_action().await;
+                            } else {
+                                app.toggle_expand();
+                            }
+                        }
+                        KeyCode::Esc => {
+                            app.expanded_index = None;
+                            app.menu_selection = 0;
+                        }
+                        KeyCode::Left | KeyCode::Char('h') => app.menu_prev(),
+                        KeyCode::Right | KeyCode::Char('l') => app.menu_next(),
                         _ => {}
                     }
                 }

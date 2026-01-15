@@ -56,7 +56,7 @@ fn draw_containers(f: &mut Frame, area: Rect, app: &mut App) {
     } else if app.containers.is_empty() {
         items.push(ListItem::new("No containers. Press 'r' to run a job."));
     } else {
-        for container in &app.containers {
+        for (idx, container) in app.containers.iter().enumerate() {
             let status_icon = match container.status.as_str() {
                 "running" => "running",
                 "success" => "success",
@@ -68,6 +68,19 @@ fn draw_containers(f: &mut Frame, area: Rect, app: &mut App) {
                 status_icon, container.name, container.dockerfile
             );
             items.push(ListItem::new(display));
+            if app.expanded_index == Some(idx) {
+                let menu_items = ["  Start", "  Stop", "  Delete"];
+                for (menu_idx, menu_item) in menu_items.iter().enumerate() {
+                    let style = if menu_idx == app.menu_selection {
+                        Style::default()
+                            .fg(Color::Yellow)
+                            .add_modifier(Modifier::BOLD)
+                    } else {
+                        Style::default().fg(Color::Gray)
+                    };
+                    items.push(ListItem::new(*menu_item).style(style));
+                }
+            }
         }
     }
 
