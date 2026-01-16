@@ -10,8 +10,7 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "foreci",
 	Short: "foreci CI/CD Tools",
-	Long: `A continuous integration tool designed for easy integration with web
-build systems`,
+	Long:  `A continuous integration tool designed for easy integration with docker build systems`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Foreci Runner v0.1.0")
 		fmt.Println("Use --help for available commands")
