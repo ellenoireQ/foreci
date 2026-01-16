@@ -1,6 +1,7 @@
 package read
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,6 +11,18 @@ import (
 	"github.com/compose-spec/compose-go/loader"
 	"github.com/compose-spec/compose-go/types"
 )
+
+type DockerCompose struct {
+	Name    string `json:"name"`
+	Service string `json:"service"`
+	Image   string `json:"image"`
+	Ports   string `json:"ports"`
+}
+
+func outputJSON(o DockerCompose) {
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.Encode(o)
+}
 
 func ReadDocker(path string) {
 	f, _ := os.Open(path)
@@ -50,9 +63,14 @@ func ReadCompose(path string) {
 	)
 
 	for _, svc := range project.Services {
-		fmt.Println("Project:", project.Name)
-		fmt.Println("Service:", svc.Name)
-		fmt.Println("Image:", svc.Image)
-		fmt.Println("Ports:", svc.Ports)
+		// Reading and format into json
+		for _, port := range svc.Ports {
+			outputJSON(DockerCompose{
+				Name:    project.Name,
+				Service: svc.Name,
+				Image:   svc.Image,
+				Ports:   port.Published,
+			})
+		}
 	}
 }
