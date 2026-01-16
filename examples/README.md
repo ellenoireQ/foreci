@@ -1,21 +1,32 @@
-# Foreci Examples
+# ForeCi Examples
 
-Example projects for testing foreci CI/CD integration.
+Example projects demonstrating ForeCi usage with Docker Compose.
 
 ## Projects
 
-| Project | Port | Description |
-|---------|------|-------------|
-| nodejs-app | 3000 | Node.js HTTP server |
+| Project | Description | Port |
+|---------|-------------|------|
+| [nodejs-app](./nodejs-app/) | Node.js Express application | 3000 |
+| [python-api](./python-api/) | Python FastAPI application | 8000 |
+| [go-service](./go-service/) | Go HTTP service | 8080 |
 
-## Usage
+## Structure
 
-```bash
-cd examples
-docker compose up --build
 ```
-
-### Test with foreci runner
-```bash
-foreci read examples/nodejs-app/Dockerfile
+examples/
+├── nodejs-app/
+│   ├── docker-compose.yml
+│   ├── Dockerfile
+│   ├── index.js
+│   └── package.json
+├── python-api/
+│   ├── docker-compose.yml
+│   ├── Dockerfile
+│   ├── main.py
+│   └── requirements.txt
+└── go-service/
+    ├── docker-compose.yml
+    ├── Dockerfile
+    ├── main.go
+    └── go.mod
 ```

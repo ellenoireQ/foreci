@@ -1,27 +1,23 @@
-name: foreci-example
+name: nodejs-app
 
 services:
-  nodejs-app:
-    image: foreci-nodejs-app:latest
+  app:
+    image: nodejs-app:latest
     build:
-      context: ./nodejs-app
+      context: .
       dockerfile: Dockerfile
-      args:
-        - NODE_VERSION=20
-    container_name: foreci-nodejs-example
+    container_name: nodejs-app
     hostname: nodejs-app
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
-    env_file:
-      - .env
     volumes:
       - app-data:/app/data
-      - ./nodejs-app/logs:/app/logs
+      - ./logs:/app/logs
     networks:
-      - foreci-network
+      - app-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
@@ -44,11 +40,11 @@ services:
           memory: 256M
 
 networks:
-  foreci-network:
-    name: foreci-network
+  app-network:
+    name: nodejs-app-network
     driver: bridge
 
 volumes:
   app-data:
-    name: foreci-app-data
+    name: nodejs-app-data
     driver: local

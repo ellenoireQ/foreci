@@ -1,0 +1,52 @@
+name: python-api
+
+services:
+  api:
+    image: python-api:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - PYTHON_VERSION=3.11
+    container_name: python-api
+    hostname: python-api
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - APP_ENV=production
+    volumes:
+      - api-data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - api-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+
+networks:
+  api-network:
+    name: python-api-network
+    driver: bridge
+
+volumes:
+  api-data:
+    name: python-api-data
+    driver: local

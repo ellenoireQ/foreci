@@ -22,15 +22,16 @@ pub enum MenuAction {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct Container {
+pub struct DockerCompose {
     pub name: String,
-    pub dockerfile: String,
-    pub status: String,
+    pub service: String,
+    pub image: String,
+    pub ports: String,
 }
 
 pub struct App {
     pub current_tab: Tab,
-    pub containers: Vec<Container>,
+    pub containers: Vec<DockerCompose>,
     pub container_state: ListState,
     pub loading: bool,
     pub log: LogList,
@@ -58,7 +59,7 @@ impl App {
         self.containers.clear();
 
         if let Ok(output) = Command::new("./bin/runner")
-            .args(["run", "test"])
+            .args(["read", "compose", "./examples/docker-compose.yml"])
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .output()
@@ -66,7 +67,9 @@ impl App {
         {
             let stdout = String::from_utf8_lossy(&output.stdout);
             for line in stdout.lines() {
-                if let Ok(parsed) = serde_json::from_str::<Container>(line) {
+                self.log.print_mes(LogType::Info, line).await;
+
+                if let Ok(parsed) = serde_json::from_str::<DockerCompose>(line) {
                     self.containers.push(parsed);
                 }
             }

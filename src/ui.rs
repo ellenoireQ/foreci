@@ -34,7 +34,12 @@ fn draw_tabs(f: &mut Frame, area: ratatui::layout::Rect, app: &App) {
     };
 
     let tabs = Tabs::new(titles)
-        .block(Block::default().borders(Borders::ALL).title("foreci"))
+        .block(
+            Block::default()
+                .border_type(ratatui::widgets::BorderType::Rounded)
+                .borders(Borders::ALL)
+                .title("foreci"),
+        )
         .select(selected)
         .highlight_style(
             Style::default()
@@ -54,16 +59,7 @@ fn draw_containers(f: &mut Frame, area: Rect, app: &mut App) {
         items.push(ListItem::new("No containers. Press 'r' to run a job."));
     } else {
         for (idx, container) in app.containers.iter().enumerate() {
-            let status_icon = match container.status.as_str() {
-                "running" => "running",
-                "success" => "success",
-                "failed" => "failed",
-                _ => "wait",
-            };
-            let display = format!(
-                "🖿 {} {} [{}]",
-                status_icon, container.name, container.dockerfile
-            );
+            let display = format!("🖿 {} [{}]", container.name, container.service);
             items.push(
                 ListItem::new(display).style(
                     Style::default()
@@ -93,8 +89,12 @@ fn draw_containers(f: &mut Frame, area: Rect, app: &mut App) {
                 .bg(Color::DarkGray)
                 .add_modifier(Modifier::BOLD),
         )
+        .block(Block::default().border_type(ratatui::widgets::BorderType::Rounded))
         .highlight_symbol("→ ");
-    let block = Block::default().borders(Borders::ALL).title("Details");
+    let block = Block::default()
+        .border_type(ratatui::widgets::BorderType::Rounded)
+        .borders(Borders::ALL)
+        .title("Details");
     let main = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Length(6), Constraint::Fill(1)])
@@ -113,7 +113,10 @@ fn draw_content(f: &mut Frame, area: ratatui::layout::Rect, app: &mut App) {
         Tab::Settings => "Settings",
     };
 
-    let block = Block::default().borders(Borders::ALL).title(title);
+    let block = Block::default()
+        .border_type(ratatui::widgets::BorderType::Rounded)
+        .borders(Borders::ALL)
+        .title(title);
 
     f.render_widget(block.clone(), area);
 
