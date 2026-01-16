@@ -2,7 +2,6 @@ package read
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -12,11 +11,21 @@ import (
 	"github.com/compose-spec/compose-go/types"
 )
 
+type DockerFile struct {
+	Value    string `json:"value"`
+	Original string `json:"original"`
+}
+
 type DockerCompose struct {
 	Name    string `json:"name"`
 	Service string `json:"service"`
 	Image   string `json:"image"`
 	Ports   string `json:"ports"`
+}
+
+func outputDockerJSON(o DockerFile) {
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.Encode(o)
 }
 
 func outputJSON(o DockerCompose) {
@@ -32,7 +41,10 @@ func ReadDocker(path string) {
 	}
 
 	for _, child := range res.AST.Children {
-		fmt.Printf("%s | %s\n", child.Value, child.Original)
+		outputDockerJSON(DockerFile{
+			Value:    child.Value,
+			Original: child.Original,
+		})
 	}
 }
 
