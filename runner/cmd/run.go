@@ -3,6 +3,8 @@ package cmd
 import (
 	"foreci/runner/cmd/read"
 	"foreci/runner/cmd/run-job"
+	"log"
+
 	"github.com/spf13/cobra"
 )
 
@@ -20,21 +22,29 @@ var runCmd = &cobra.Command{
 
 /*
 * WIP -- Function
-* Reading Docker file
-* @param: main.go read $dockerfile
+* Reading Docker build system file
+* @param: main.go read {dockerfile, compose} $pathfile
 * */
-var readDockerFile = &cobra.Command{
-	Use:   "read [file]",
-	Short: "Reading Dockerfile",
-	Long:  `Reading Dockerfile`,
-	Args:  cobra.MinimumNArgs(1),
+var readCmd = &cobra.Command{
+	Use:   "read [type] [path]",
+	Short: "Read docker files",
+	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		filePath := args[0]
-		read.ReadDocker(filePath)
+		fileType := args[0] // <== dockerfile | compose
+		path := args[1]
+
+		switch fileType {
+		case "compose":
+			read.ReadCompose(path)
+		case "dockerfile":
+			read.ReadDocker(path)
+		default:
+			log.Fatalf("unknown type: %s", fileType)
+		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(runCmd)
-	rootCmd.AddCommand(readDockerFile)
+	rootCmd.AddCommand(readCmd)
 }
