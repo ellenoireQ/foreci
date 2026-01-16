@@ -94,8 +94,14 @@ fn draw_containers(f: &mut Frame, area: Rect, app: &mut App) {
                 .add_modifier(Modifier::BOLD),
         )
         .highlight_symbol("→ ");
+    let block = Block::default().borders(Borders::ALL).title("Details");
+    let main = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(6), Constraint::Fill(1)])
+        .split(area);
 
-    f.render_stateful_widget(list, area, &mut app.container_state);
+    f.render_stateful_widget(list, main[0], &mut app.container_state);
+    f.render_widget(block, main[1]);
 }
 
 fn draw_content(f: &mut Frame, area: ratatui::layout::Rect, app: &mut App) {
