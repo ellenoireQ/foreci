@@ -5,9 +5,7 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem, Paragraph, Tabs},
 };
 
-use crate::{
-    app::{App, Tab},
-};
+use crate::app::{App, Tab};
 
 pub fn draw_ui(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
@@ -63,10 +61,16 @@ fn draw_containers(f: &mut Frame, area: Rect, app: &mut App) {
                 _ => "wait",
             };
             let display = format!(
-                "{} {} [{}]",
+                "🖿 {} {} [{}]",
                 status_icon, container.name, container.dockerfile
             );
-            items.push(ListItem::new(display));
+            items.push(
+                ListItem::new(display).style(
+                    Style::default()
+                        .fg(Color::Blue)
+                        .add_modifier(Modifier::BOLD),
+                ),
+            );
             if app.expanded_index == Some(idx) {
                 let menu_items = ["  Start", "  Stop", "  Delete"];
                 for (menu_idx, menu_item) in menu_items.iter().enumerate() {
@@ -127,7 +131,6 @@ fn draw_content(f: &mut Frame, area: ratatui::layout::Rect, app: &mut App) {
 }
 
 fn draw_footer(f: &mut Frame, area: ratatui::layout::Rect, app: &App) {
-
     let footer = Paragraph::new(
         "q: Quit | r: Run Job | Tab: Next | Shift+Tab: Prev | ↕ or k/j : Select List",
     )
