@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"foreci/runner/cmd/read"
 	"github.com/spf13/cobra"
 )
 
@@ -19,6 +20,22 @@ var runCmd = &cobra.Command{
 	},
 }
 
+/*
+* WIP -- Function
+* Reading Docker file
+* @param: main.go read $dockerfile
+* */
+var readDockerFile = &cobra.Command{
+	Use:   "read [file]",
+	Short: "Reading Dockerfile",
+	Long:  `Reading Dockerfile`,
+	Args:  cobra.MinimumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		filePath := args[0]
+		read.ReadDocker(filePath)
+	},
+}
+
 type Output struct {
 	Name       string `json:"name"`
 	DockerFile string `json:"dockerfile"`
@@ -27,6 +44,7 @@ type Output struct {
 
 func init() {
 	rootCmd.AddCommand(runCmd)
+	rootCmd.AddCommand(readDockerFile)
 }
 
 func outputJSON(o Output) {
