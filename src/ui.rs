@@ -115,7 +115,7 @@ fn draw_containers(f: &mut Frame, area: Rect, app: &mut App) {
         Some(idx) => {
             let mans = Layout::default()
                 .direction(Direction::Horizontal)
-                .constraints([Constraint::Percentage(30), Constraint::Percentage(30)])
+                .constraints([Constraint::Fill(1)])
                 .split(inner);
 
             if app.loading {
@@ -187,15 +187,15 @@ fn draw_containers(f: &mut Frame, area: Rect, app: &mut App) {
                     ];
 
                     let widths = [
-                        Constraint::Length(10),
+                        Constraint::Length(12),
                         Constraint::Length(2),
-                        Constraint::Min(15),
+                        Constraint::Fill(1),
                     ];
 
                     let table = Table::new(rows, widths).block(Block::default()).widths(&[
-                        Constraint::Length(10),
+                        Constraint::Length(12),
                         Constraint::Length(2),
-                        Constraint::Min(15),
+                        Constraint::Fill(1),
                     ]);
 
                     f.render_widget(table, mans[0]);
