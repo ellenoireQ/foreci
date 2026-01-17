@@ -32,6 +32,11 @@ pub struct DockerCompose {
     pub ports: String,
 }
 
+#[derive(Deserialize)]
+pub struct FilePath {
+    filepath: String,
+}
+
 pub struct App {
     pub current_tab: Tab,
     pub containers: Vec<DockerCompose>,
@@ -60,15 +65,11 @@ impl Default for App {
 
 impl App {
     pub async fn fetch_containers(&mut self) {
+        let mut results: Vec<FilePath> = vec![];
         self.loading = true;
         self.containers.clear();
-
         if let Ok(output) = Command::new("./bin/runner")
-            .args([
-                "read",
-                "compose",
-                "./examples/go-service/docker-compose.yml",
-            ])
+            .args(["search", "docker-compose.yml"])
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .output()
@@ -76,10 +77,27 @@ impl App {
         {
             let stdout = String::from_utf8_lossy(&output.stdout);
             for line in stdout.lines() {
-                self.log.print_mes(LogType::Info, line).await;
+                if let Ok(parse) = serde_json::from_str::<FilePath>(line) {
+                    results.push(parse);
+                }
+            }
+        }
 
-                if let Ok(parsed) = serde_json::from_str::<DockerCompose>(line) {
-                    self.containers.push(parsed);
+        for file_path in &results {
+            let full_path = format!("{}/docker-compose.yml", file_path.filepath);
+            if let Ok(output) = Command::new("./bin/runner")
+                .args(["read", "compose", &full_path])
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .output()
+                .await
+            {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                for line in stdout.lines() {
+                    let _ = self.log.print_mes(LogType::Info, line);
+                    if let Ok(parsed) = serde_json::from_str::<DockerCompose>(line) {
+                        self.containers.push(parsed);
+                    }
                 }
             }
         }
