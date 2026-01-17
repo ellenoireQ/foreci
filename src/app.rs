@@ -41,6 +41,7 @@ pub struct App {
     pub current_tab: Tab,
     pub containers: Vec<DockerCompose>,
     pub container_state: ListState,
+    pub container_idx: Option<usize>,
     pub loading: bool,
     pub log: LogList,
     pub expanded_index: Option<usize>,
@@ -54,6 +55,7 @@ impl Default for App {
             current_tab: Tab::Containers,
             containers: Vec::new(),
             container_state: ListState::default(),
+            container_idx: Some(0),
             loading: false,
             log: LogList::default(),
             expanded_index: None,
@@ -144,6 +146,7 @@ impl App {
             None => 0,
         };
         self.container_state.select(Some(i));
+        self.container_idx = Some(i);
     }
 
     pub fn select_prev_container(&mut self) {
@@ -161,6 +164,7 @@ impl App {
             None => self.containers.len() - 1,
         };
         self.container_state.select(Some(i));
+        self.container_idx = Some(i);
     }
 
     pub fn toggle_expand(&mut self) {

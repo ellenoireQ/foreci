@@ -111,45 +111,79 @@ fn draw_containers(f: &mut Frame, area: Rect, app: &mut App) {
     let inner = block.inner(main[1]);
     f.render_stateful_widget(list, main[0], &mut app.container_state);
     f.render_widget(block, main[1]);
-    if app.details_state {
-        let mans = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(30), Constraint::Percentage(30)])
-            .split(inner);
-        let rows = vec![
-            Row::new(vec![
-                Cell::from("Name"),
-                Cell::from(":"),
-                Cell::from("examples"),
-            ]),
-            Row::new(vec![
-                Cell::from("Service"),
-                Cell::from(":"),
-                Cell::from("nodejs-app"),
-            ]),
-            Row::new(vec![
-                Cell::from("State"),
-                Cell::from(":"),
-                Cell::from("running"),
-            ]),
-            Row::new(vec![
-                Cell::from("Other"),
-                Cell::from(":"),
-                Cell::from("dummy"),
-            ]),
-        ];
-        let widths = [
-            Constraint::Length(10),
-            Constraint::Length(2),
-            Constraint::Min(10),
-        ];
-        let table = Table::new(rows, widths).block(Block::default()).widths(&[
-            Constraint::Length(10),
-            Constraint::Length(2),
-            Constraint::Min(10),
-        ]);
+    match app.container_idx {
+        Some(idx) => {
+            let mans = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([Constraint::Percentage(30), Constraint::Percentage(30)])
+                .split(inner);
 
-        f.render_widget(table, mans[0]);
+            if app.loading {
+                return;
+            }
+            let (name, service, state, port, image) = match idx {
+                0 => ("web-frontend", "nginx", "running", "8080", "nginx:latest"),
+                1 => (
+                    "api-backend",
+                    "express-api",
+                    "stopped",
+                    "3000",
+                    "node:18-alpine",
+                ),
+                2 => ("database", "postgres-db", "running", "5432", "postgres:15"),
+                3 => ("redis-cache", "redis", "paused", "6379", "redis:7-alpine"),
+                4 => (
+                    "worker-service",
+                    "celery-worker",
+                    "running",
+                    "N/A",
+                    "python:3.11",
+                ),
+                5 => (
+                    "monitoring",
+                    "prometheus",
+                    "running",
+                    "9090",
+                    "prom/prometheus",
+                ),
+                _ => ("unknown", "unknown-svc", "unknown", "N/A", "unknown:latest"),
+            };
+
+            let rows = vec![
+                Row::new(vec![Cell::from("Name"), Cell::from(":"), Cell::from(name)]),
+                Row::new(vec![
+                    Cell::from("Service"),
+                    Cell::from(":"),
+                    Cell::from(service),
+                ]),
+                Row::new(vec![
+                    Cell::from("State"),
+                    Cell::from(":"),
+                    Cell::from(state),
+                ]),
+                Row::new(vec![Cell::from("Port"), Cell::from(":"), Cell::from(port)]),
+                Row::new(vec![
+                    Cell::from("Image"),
+                    Cell::from(":"),
+                    Cell::from(image),
+                ]),
+            ];
+
+            let widths = [
+                Constraint::Length(10),
+                Constraint::Length(2),
+                Constraint::Min(15),
+            ];
+
+            let table = Table::new(rows, widths).block(Block::default()).widths(&[
+                Constraint::Length(10),
+                Constraint::Length(2),
+                Constraint::Min(15),
+            ]);
+
+            f.render_widget(table, mans[0]);
+        }
+        None => {}
     }
 }
 
