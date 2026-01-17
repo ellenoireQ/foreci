@@ -74,9 +74,9 @@ fn draw_containers(f: &mut Frame, area: Rect, app: &mut App) {
                 ),
             );
             if app.expanded_index == Some(idx) {
-                let _ = app.toggleDetails();
+                app.toggle_details();
                 let s = format!("{}", app.details_state.clone());
-                let _ = app.log.print_mes(LogType::Info, s.as_str());
+                app.log.print_mes(LogType::Info, s.as_str());
                 let menu_items = ["  Start", "  Stop", "  Delete"];
                 for (menu_idx, menu_item) in menu_items.iter().enumerate() {
                     let style = if menu_idx == app.menu_selection {

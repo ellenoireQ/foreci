@@ -29,18 +29,15 @@ async fn main() -> io::Result<()> {
     let mut app = App::default();
 
     app.loading = true;
-    app.log
-        .print_mes(LogType::Info, "Fetching Containers")
-        .await;
+    app.log.print_mes(LogType::Info, "Fetching Containers");
     terminal.draw(|f| draw_ui(f, &mut app))?;
 
     app.fetch_containers().await;
     if !app.loading {
-        app.log.print_mes(LogType::Info, "Container loaded").await;
+        app.log.print_mes(LogType::Info, "Container loaded");
     } else {
         app.log
-            .print_mes(LogType::Error, "Failed to fetching container")
-            .await;
+            .print_mes(LogType::Error, "Failed to fetching container");
     }
 
     loop {

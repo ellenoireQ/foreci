@@ -94,7 +94,7 @@ impl App {
             {
                 let stdout = String::from_utf8_lossy(&output.stdout);
                 for line in stdout.lines() {
-                    let _ = self.log.print_mes(LogType::Info, line);
+                    self.log.print_mes(LogType::Info, line);
                     if let Ok(parsed) = serde_json::from_str::<DockerCompose>(line) {
                         self.containers.push(parsed);
                     }
@@ -212,18 +212,15 @@ impl App {
                 match action {
                     Some(MenuAction::Start) => {
                         self.log
-                            .print_mes(LogType::Info, &format!("Starting: {}", container_name))
-                            .await;
+                            .print_mes(LogType::Info, &format!("Starting: {}", container_name));
                     }
                     Some(MenuAction::Stop) => {
                         self.log
-                            .print_mes(LogType::Info, &format!("Stopping: {}", container_name))
-                            .await;
+                            .print_mes(LogType::Info, &format!("Stopping: {}", container_name));
                     }
                     Some(MenuAction::Delete) => {
                         self.log
-                            .print_mes(LogType::Info, &format!("Deleting: {}", container_name))
-                            .await;
+                            .print_mes(LogType::Info, &format!("Deleting: {}", container_name));
                         self.containers.remove(idx);
                         if self.containers.is_empty() {
                             self.container_state.select(None);
@@ -239,9 +236,9 @@ impl App {
         }
     }
 
-    pub fn toggleDetails(&mut self) {
+    pub fn toggle_details(&mut self) {
         self.details_state = true;
         let i = format!("Boolean state: {}", self.details_state);
-        let _ = self.log.print_mes(LogType::Info, i.as_str());
+        self.log.print_mes(LogType::Info, i.as_str());
     }
 }
