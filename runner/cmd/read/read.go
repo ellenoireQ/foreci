@@ -20,10 +20,18 @@ type DockerFile struct {
 }
 
 type DockerCompose struct {
-	Name    string `json:"name"`
-	Service string `json:"service"`
-	Image   string `json:"image"`
-	Ports   string `json:"ports"`
+	Name          string   `json:"name"`
+	Service       string   `json:"service"`
+	Image         string   `json:"image"`
+	Ports         string   `json:"ports"`
+	ContainerName string   `json:"container_name"`
+	Hostname      string   `json:"hostname"`
+	BuildContext  string   `json:"build_context"`
+	Dockerfile    string   `json:"dockerfile"`
+	Environment   []string `json:"environment"`
+	Volumes       []string `json:"volumes"`
+	Networks      []string `json:"networks"`
+	Restart       string   `json:"restart"`
 }
 
 func outputDockerJSON(o DockerFile) {
@@ -78,13 +86,45 @@ func ReadCompose(path string) {
 	)
 
 	for _, svc := range project.Services {
-		// Reading and format into json
+		var envVars []string
+		for key, val := range svc.Environment {
+			if val != nil {
+				envVars = append(envVars, key+"="+*val)
+			} else {
+				envVars = append(envVars, key)
+			}
+		}
+
+		var volumes []string
+		for _, vol := range svc.Volumes {
+			volumes = append(volumes, vol.String())
+		}
+
+		var networks []string
+		for netName := range svc.Networks {
+			networks = append(networks, netName)
+		}
+
+		var buildContext, dockerfile string
+		if svc.Build != nil {
+			buildContext = svc.Build.Context
+			dockerfile = svc.Build.Dockerfile
+		}
+
 		for _, port := range svc.Ports {
 			outputJSON(DockerCompose{
-				Name:    project.Name,
-				Service: svc.Name,
-				Image:   svc.Image,
-				Ports:   port.Published,
+				Name:          project.Name,
+				Service:       svc.Name,
+				Image:         svc.Image,
+				Ports:         port.Published,
+				ContainerName: svc.ContainerName,
+				Hostname:      svc.Hostname,
+				BuildContext:  buildContext,
+				Dockerfile:    dockerfile,
+				Environment:   envVars,
+				Volumes:       volumes,
+				Networks:      networks,
+				Restart:       svc.Restart,
 			})
 		}
 	}
