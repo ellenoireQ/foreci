@@ -1,3 +1,6 @@
+// Copyright 2026 Fitrian Musya
+// SPDX-License-Identifier: MIT
+
 mod app;
 mod log;
 mod ui;

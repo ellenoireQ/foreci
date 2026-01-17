@@ -1,8 +1,11 @@
+// Copyright 2026 Fitrian Musya
+// SPDX-License-Identifier: MIT
+
 package cmd
 
 import (
 	"foreci/runner/cmd/read"
-	"foreci/runner/cmd/run-job"
+	runjob "foreci/runner/cmd/run-job"
 	searchmatch "foreci/runner/cmd/search-match"
 	"log"
 

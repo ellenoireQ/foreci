@@ -1,3 +1,6 @@
+// Copyright 2026 Fitrian Musya
+// SPDX-License-Identifier: MIT
+
 package runjob
 
 import (
