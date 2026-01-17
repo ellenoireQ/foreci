@@ -135,14 +135,54 @@ fn draw_containers(f: &mut Frame, area: Rect, app: &mut App) {
                             Cell::from(ctn.service.clone()),
                         ]),
                         Row::new(vec![
-                            Cell::from("Port"),
+                            Cell::from("Container"),
                             Cell::from(":"),
-                            Cell::from(ctn.ports.clone()),
+                            Cell::from(ctn.container_name.clone()),
+                        ]),
+                        Row::new(vec![
+                            Cell::from("Hostname"),
+                            Cell::from(":"),
+                            Cell::from(ctn.hostname.clone()),
                         ]),
                         Row::new(vec![
                             Cell::from("Image"),
                             Cell::from(":"),
                             Cell::from(ctn.image.clone()),
+                        ]),
+                        Row::new(vec![
+                            Cell::from("Port"),
+                            Cell::from(":"),
+                            Cell::from(ctn.ports.clone()),
+                        ]),
+                        Row::new(vec![
+                            Cell::from("Build Ctx"),
+                            Cell::from(":"),
+                            Cell::from(ctn.build_context.clone()),
+                        ]),
+                        Row::new(vec![
+                            Cell::from("Dockerfile"),
+                            Cell::from(":"),
+                            Cell::from(ctn.dockerfile.clone()),
+                        ]),
+                        Row::new(vec![
+                            Cell::from("Env"),
+                            Cell::from(":"),
+                            Cell::from(ctn.environment.join(", ")),
+                        ]),
+                        Row::new(vec![
+                            Cell::from("Volumes"),
+                            Cell::from(":"),
+                            Cell::from(ctn.volumes.join(", ")),
+                        ]),
+                        Row::new(vec![
+                            Cell::from("Networks"),
+                            Cell::from(":"),
+                            Cell::from(ctn.networks.join(", ")),
+                        ]),
+                        Row::new(vec![
+                            Cell::from("Restart"),
+                            Cell::from(":"),
+                            Cell::from(ctn.restart.clone()),
                         ]),
                     ];
 

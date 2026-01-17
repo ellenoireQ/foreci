@@ -30,6 +30,14 @@ pub struct DockerCompose {
     pub service: String,
     pub image: String,
     pub ports: String,
+    pub container_name: String,
+    pub hostname: String,
+    pub build_context: String,
+    pub dockerfile: String,
+    pub environment: Vec<String>,
+    pub volumes: Vec<String>,
+    pub networks: Vec<String>,
+    pub restart: String,
 }
 
 #[derive(Deserialize)]
