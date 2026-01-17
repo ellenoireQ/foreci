@@ -37,6 +37,7 @@ pub struct App {
     pub log: LogList,
     pub expanded_index: Option<usize>,
     pub menu_selection: usize,
+    pub details_state: bool,
 }
 
 impl Default for App {
@@ -49,6 +50,7 @@ impl Default for App {
             log: LogList::default(),
             expanded_index: None,
             menu_selection: 0,
+            details_state: false,
         }
     }
 }
@@ -59,7 +61,11 @@ impl App {
         self.containers.clear();
 
         if let Ok(output) = Command::new("./bin/runner")
-            .args(["read", "compose", "./examples/docker-compose.yml"])
+            .args([
+                "read",
+                "compose",
+                "./examples/go-service/docker-compose.yml",
+            ])
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .output()
@@ -210,5 +216,11 @@ impl App {
                 self.menu_selection = 0;
             }
         }
+    }
+
+    pub fn toggleDetails(&mut self) {
+        self.details_state = true;
+        let i = format!("Boolean state: {}", self.details_state);
+        let _ = self.log.print_mes(LogType::Info, i.as_str());
     }
 }

@@ -2,10 +2,13 @@ use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    widgets::{Block, Borders, List, ListItem, Paragraph, Tabs},
+    widgets::{Block, Borders, Cell, List, ListItem, Paragraph, Row, Table, Tabs},
 };
 
-use crate::app::{App, Tab};
+use crate::{
+    app::{App, Tab},
+    log::log::LogType,
+};
 
 pub fn draw_ui(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
@@ -58,7 +61,7 @@ fn draw_containers(f: &mut Frame, area: Rect, app: &mut App) {
     } else if app.containers.is_empty() {
         items.push(ListItem::new("No containers. Press 'r' to run a job."));
     } else {
-        for (idx, container) in app.containers.iter().enumerate() {
+        for (idx, container) in app.containers.clone().iter().enumerate() {
             let display = format!("🖿 {} [{}]", container.name, container.service);
             items.push(
                 ListItem::new(display).style(
@@ -68,6 +71,9 @@ fn draw_containers(f: &mut Frame, area: Rect, app: &mut App) {
                 ),
             );
             if app.expanded_index == Some(idx) {
+                let _ = app.toggleDetails();
+                let s = format!("{}", app.details_state.clone());
+                let _ = app.log.print_mes(LogType::Info, s.as_str());
                 let menu_items = ["  Start", "  Stop", "  Delete"];
                 for (menu_idx, menu_item) in menu_items.iter().enumerate() {
                     let style = if menu_idx == app.menu_selection {
@@ -99,9 +105,49 @@ fn draw_containers(f: &mut Frame, area: Rect, app: &mut App) {
         .direction(Direction::Vertical)
         .constraints([Constraint::Length(6), Constraint::Fill(1)])
         .split(area);
-
+    let inner = block.inner(main[1]);
     f.render_stateful_widget(list, main[0], &mut app.container_state);
     f.render_widget(block, main[1]);
+    if app.details_state {
+        let mans = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(30), Constraint::Percentage(30)])
+            .split(inner);
+        let rows = vec![
+            Row::new(vec![
+                Cell::from("Name"),
+                Cell::from(":"),
+                Cell::from("examples"),
+            ]),
+            Row::new(vec![
+                Cell::from("Service"),
+                Cell::from(":"),
+                Cell::from("nodejs-app"),
+            ]),
+            Row::new(vec![
+                Cell::from("State"),
+                Cell::from(":"),
+                Cell::from("running"),
+            ]),
+            Row::new(vec![
+                Cell::from("Other"),
+                Cell::from(":"),
+                Cell::from("dummy"),
+            ]),
+        ];
+        let widths = [
+            Constraint::Length(10),
+            Constraint::Length(2),
+            Constraint::Min(10),
+        ];
+        let table = Table::new(rows, widths).block(Block::default()).widths(&[
+            Constraint::Length(10),
+            Constraint::Length(2),
+            Constraint::Min(10),
+        ]);
+
+        f.render_widget(table, mans[0]);
+    }
 }
 
 fn draw_content(f: &mut Frame, area: ratatui::layout::Rect, app: &mut App) {
