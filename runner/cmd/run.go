@@ -3,6 +3,7 @@ package cmd
 import (
 	"foreci/runner/cmd/read"
 	"foreci/runner/cmd/run-job"
+	searchmatch "foreci/runner/cmd/search-match"
 	"log"
 
 	"github.com/spf13/cobra"
@@ -44,7 +45,18 @@ var readCmd = &cobra.Command{
 	},
 }
 
+var searchMatchesCmd = &cobra.Command{
+	Use:   "search $PREFIX",
+	Short: "Search matches files",
+	Args:  cobra.MaximumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		prefix := args[0]
+		searchmatch.SearchMatchesFile(prefix)
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(readCmd)
+	rootCmd.AddCommand(searchMatchesCmd)
 }
