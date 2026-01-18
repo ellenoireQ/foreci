@@ -69,7 +69,7 @@ fn draw_containers(f: &mut Frame, area: Rect, app: &mut App) {
             items.push(
                 ListItem::new(display).style(
                     Style::default()
-                        .fg(Color::Blue)
+                        .fg(Color::Cyan)
                         .add_modifier(Modifier::BOLD),
                 ),
             );
