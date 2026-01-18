@@ -206,6 +206,96 @@ fn draw_containers(f: &mut Frame, area: Rect, app: &mut App) {
     }
 }
 
+fn draw_images(f: &mut Frame, area: Rect, app: &mut App) {
+    let mut items: Vec<ListItem> = Vec::new();
+
+    if app.loading {
+        items.push(ListItem::new("⏳ Loading images..."));
+    } else if app.images.is_empty() {
+        items.push(ListItem::new("No images found. Press 'i' to refresh."));
+    } else {
+        for image in &app.images {
+            let display = format!("🐳 {}:{}", image.repository, image.tag);
+            items.push(
+                ListItem::new(display).style(
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
+                ),
+            );
+        }
+    }
+
+    let list = List::new(items)
+        .highlight_style(
+            Style::default()
+                .bg(Color::DarkGray)
+                .add_modifier(Modifier::BOLD),
+        )
+        .block(Block::default().border_type(ratatui::widgets::BorderType::Rounded))
+        .highlight_symbol("→ ");
+
+    let block = Block::default()
+        .border_type(ratatui::widgets::BorderType::Rounded)
+        .borders(Borders::ALL)
+        .title("Image Details");
+
+    let main = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(8), Constraint::Fill(1)])
+        .split(area);
+
+    let inner = block.inner(main[1]);
+    f.render_stateful_widget(list, main[0], &mut app.image_state);
+    f.render_widget(block, main[1]);
+
+    if let Some(idx) = app.image_idx {
+        if let Some(image) = app.images.get(idx) {
+            let rows = vec![
+                Row::new(vec![
+                    Cell::from("Repository"),
+                    Cell::from(":"),
+                    Cell::from(image.repository.clone()),
+                ]),
+                Row::new(vec![
+                    Cell::from("Tag"),
+                    Cell::from(":"),
+                    Cell::from(image.tag.clone()),
+                ]),
+                Row::new(vec![
+                    Cell::from("Image ID"),
+                    Cell::from(":"),
+                    Cell::from(image.image_id.clone()),
+                ]),
+                Row::new(vec![
+                    Cell::from("Created"),
+                    Cell::from(":"),
+                    Cell::from(image.created.clone()),
+                ]),
+                Row::new(vec![
+                    Cell::from("Size"),
+                    Cell::from(":"),
+                    Cell::from(image.size.clone()),
+                ]),
+            ];
+
+            let widths = [
+                Constraint::Length(12),
+                Constraint::Length(2),
+                Constraint::Fill(1),
+            ];
+
+            let table = Table::new(rows, widths).block(Block::default()).widths(&[
+                Constraint::Length(12),
+                Constraint::Length(2),
+                Constraint::Fill(1),
+            ]);
+
+            f.render_widget(table, inner);
+        }
+    }
+}
+
 fn draw_content(f: &mut Frame, area: ratatui::layout::Rect, app: &mut App) {
     let title = match app.current_tab {
         Tab::Containers => "Containers",
@@ -226,9 +316,7 @@ fn draw_content(f: &mut Frame, area: ratatui::layout::Rect, app: &mut App) {
 
     match app.current_tab {
         Tab::Containers => draw_containers(f, inner, app),
-        Tab::Images => {
-            //
-        }
+        Tab::Images => draw_images(f, inner, app),
         Tab::Deployments => {
             //
         }

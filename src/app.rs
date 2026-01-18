@@ -40,6 +40,24 @@ pub struct DockerCompose {
     pub restart: String,
 }
 
+#[derive(Debug, Clone)]
+pub struct DockerImage {
+    pub repository: String,
+    pub tag: String,
+    pub image_id: String,
+    pub created: String,
+    pub size: String,
+}
+
+#[derive(Deserialize)]
+struct ImageJson {
+    repository: String,
+    tag: String,
+    image_id: String,
+    created: String,
+    size: String,
+}
+
 #[derive(Deserialize)]
 pub struct FilePath {
     filepath: String,
@@ -55,6 +73,9 @@ pub struct App {
     pub expanded_index: Option<usize>,
     pub menu_selection: usize,
     pub details_state: bool,
+    pub images: Vec<DockerImage>,
+    pub image_state: ListState,
+    pub image_idx: Option<usize>,
 }
 
 impl Default for App {
@@ -69,6 +90,9 @@ impl Default for App {
             expanded_index: None,
             menu_selection: 0,
             details_state: false,
+            images: Vec::new(),
+            image_state: ListState::default(),
+            image_idx: None,
         }
     }
 }
@@ -110,6 +134,46 @@ impl App {
                     }
                 }
             }
+        }
+
+        self.loading = false;
+    }
+
+    pub async fn fetch_images(&mut self) {
+        self.loading = true;
+        self.images.clear();
+
+        if let Ok(output) = Command::new("./bin/runner")
+            .args(["images"])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output()
+            .await
+        {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            for line in stdout.lines() {
+                if let Ok(parsed) = serde_json::from_str::<ImageJson>(line) {
+                    let image = DockerImage {
+                        repository: parsed.repository,
+                        tag: parsed.tag,
+                        image_id: parsed.image_id,
+                        created: parsed.created,
+                        size: parsed.size,
+                    };
+                    self.images.push(image);
+                }
+            }
+        }
+
+        if self.images.is_empty() {
+            self.log.print_mes(LogType::Info, "No Docker images found");
+        } else {
+            self.log.print_mes(
+                LogType::Info,
+                &format!("Found {} images", self.images.len()),
+            );
+            self.image_state.select(Some(0));
+            self.image_idx = Some(0);
         }
 
         self.loading = false;
@@ -173,6 +237,42 @@ impl App {
         };
         self.container_state.select(Some(i));
         self.container_idx = Some(i);
+    }
+
+    pub fn select_next_image(&mut self) {
+        if self.images.is_empty() {
+            return;
+        }
+        let i = match self.image_state.selected() {
+            Some(i) => {
+                if i >= self.images.len() - 1 {
+                    0
+                } else {
+                    i + 1
+                }
+            }
+            None => 0,
+        };
+        self.image_state.select(Some(i));
+        self.image_idx = Some(i);
+    }
+
+    pub fn select_prev_image(&mut self) {
+        if self.images.is_empty() {
+            return;
+        }
+        let i = match self.image_state.selected() {
+            Some(i) => {
+                if i == 0 {
+                    self.images.len() - 1
+                } else {
+                    i - 1
+                }
+            }
+            None => self.images.len() - 1,
+        };
+        self.image_state.select(Some(i));
+        self.image_idx = Some(i);
     }
 
     pub fn toggle_expand(&mut self) {

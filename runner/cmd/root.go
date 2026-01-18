@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"os"
 
+	"foreci/runner/cmd/images"
+
 	"github.com/spf13/cobra"
 )
 
@@ -28,5 +30,5 @@ func Execute() {
 }
 
 func init() {
-	//
+	rootCmd.AddCommand(images.ImagesCmd)
 }

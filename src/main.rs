@@ -48,26 +48,46 @@ async fn main() -> io::Result<()> {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
                         KeyCode::Char('q') => break,
-                        KeyCode::Char('r') | KeyCode::Char('R') => {
-                            app.fetch_containers().await;
+                        KeyCode::Char('r') | KeyCode::Char('R') => match app.current_tab {
+                            app::Tab::Containers => app.fetch_containers().await,
+                            app::Tab::Images => app.fetch_images().await,
+                            _ => {}
+                        },
+                        KeyCode::Tab => {
+                            app.next_tab();
+                            if app.current_tab == app::Tab::Images && app.images.is_empty() {
+                                app.fetch_images().await;
+                            }
                         }
-                        KeyCode::Tab => app.next_tab(),
-                        KeyCode::BackTab => app.prev_tab(),
+                        KeyCode::BackTab => {
+                            app.prev_tab();
+                            if app.current_tab == app::Tab::Images && app.images.is_empty() {
+                                app.fetch_images().await;
+                            }
+                        }
                         KeyCode::Char('d') => app.delete().await,
-                        KeyCode::Up | KeyCode::Char('k') => {
-                            if app.expanded_index.is_some() {
-                                app.menu_prev();
-                            } else {
-                                app.select_prev_container();
+                        KeyCode::Up | KeyCode::Char('k') => match app.current_tab {
+                            app::Tab::Containers => {
+                                if app.expanded_index.is_some() {
+                                    app.menu_prev();
+                                } else {
+                                    app.select_prev_container();
+                                }
                             }
-                        }
-                        KeyCode::Down | KeyCode::Char('j') => {
-                            if app.expanded_index.is_some() {
-                                app.menu_next();
-                            } else {
-                                app.select_next_container();
+                            app::Tab::Images => app.select_prev_image(),
+                            _ => {}
+                        },
+                        KeyCode::Down | KeyCode::Char('j') => match app.current_tab {
+                            app::Tab::Containers => {
+                                if app.expanded_index.is_some() {
+                                    app.menu_next();
+                                } else {
+                                    app.select_next_container();
+                                }
                             }
-                        }
+                            app::Tab::Images => app.select_next_image(),
+                            _ => {}
+                        },
                         KeyCode::Enter => {
                             if app.expanded_index.is_some() {
                                 app.execute_menu_action().await;
