@@ -319,20 +319,91 @@ impl App {
         if let Some(idx) = self.expanded_index {
             if idx < self.containers.len() {
                 let action = self.get_menu_action();
-                let container_name = self.containers[idx].name.clone();
+                let container = self.containers[idx].clone();
 
                 match action {
                     Some(MenuAction::Start) => {
-                        self.log
-                            .print_mes(LogType::Info, &format!("Starting: {}", container_name));
+                        self.log.print_mes(
+                            LogType::Info,
+                            &format!("Creating container: {}", container.name),
+                        );
+
+                        let mut args = vec![
+                            "create".to_string(),
+                            "--image".to_string(),
+                            container.image.clone(),
+                            "--start".to_string(),
+                        ];
+
+                        if !container.container_name.is_empty() {
+                            args.push("--name".to_string());
+                            args.push(container.container_name.clone());
+                        } else if !container.service.is_empty() {
+                            args.push("--name".to_string());
+                            args.push(format!("{}-{}", container.name, container.service));
+                        }
+
+                        if !container.hostname.is_empty() {
+                            args.push("--hostname".to_string());
+                            args.push(container.hostname.clone());
+                        }
+
+                        if !container.ports.is_empty() {
+                            args.push("--ports".to_string());
+                            args.push(container.ports.clone());
+                        }
+
+                        if !container.environment.is_empty() {
+                            args.push("--env".to_string());
+                            args.push(container.environment.join(","));
+                        }
+
+                        if !container.volumes.is_empty() {
+                            args.push("--volumes".to_string());
+                            args.push(container.volumes.join(","));
+                        }
+
+                        if !container.restart.is_empty() {
+                            args.push("--restart".to_string());
+                            args.push(container.restart.clone());
+                        }
+
+                        match Command::new("./bin/runner")
+                            .args(&args)
+                            .stdout(Stdio::piped())
+                            .stderr(Stdio::piped())
+                            .output()
+                            .await
+                        {
+                            Ok(output) => {
+                                let stdout = String::from_utf8_lossy(&output.stdout);
+                                let stderr = String::from_utf8_lossy(&output.stderr);
+
+                                if output.status.success() {
+                                    self.log.print_mes(
+                                        LogType::Info,
+                                        &format!("Started: {}", stdout.trim()),
+                                    );
+                                } else {
+                                    self.log.print_mes(
+                                        LogType::Info,
+                                        &format!("Error: {}", stderr.trim()),
+                                    );
+                                }
+                            }
+                            Err(e) => {
+                                self.log
+                                    .print_mes(LogType::Info, &format!("Failed to run: {}", e));
+                            }
+                        }
                     }
                     Some(MenuAction::Stop) => {
                         self.log
-                            .print_mes(LogType::Info, &format!("Stopping: {}", container_name));
+                            .print_mes(LogType::Info, &format!("Stopping: {}", container.name));
                     }
                     Some(MenuAction::Delete) => {
                         self.log
-                            .print_mes(LogType::Info, &format!("Deleting: {}", container_name));
+                            .print_mes(LogType::Info, &format!("Deleting: {}", container.name));
                         self.containers.remove(idx);
                         if self.containers.is_empty() {
                             self.container_state.select(None);
