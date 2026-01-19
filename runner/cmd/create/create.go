@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/netip"
 	"os"
 	"strings"
@@ -149,6 +150,38 @@ func getRestartPolicy(policyStr string) container.RestartPolicy {
 	}
 }
 
+func imageExists(cli *client.Client, imageName string) bool {
+	ctx := context.Background()
+	result, err := cli.ImageList(ctx, client.ImageListOptions{})
+	if err != nil {
+		return false
+	}
+	for _, img := range result.Items {
+		for _, tag := range img.RepoTags {
+			if tag == imageName {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func pullImage(cli *client.Client, imageName string) error {
+	// Skip if image already exists
+	if imageExists(cli, imageName) {
+		return nil
+	}
+
+	out, err := cli.ImagePull(context.Background(), imageName, client.ImagePullOptions{})
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	io.Copy(io.Discard, out)
+
+	return nil
+}
 func createContainer() {
 	ctx := context.Background()
 
@@ -189,6 +222,9 @@ func createContainer() {
 		NetworkingConfig: networkConfig,
 		Name:             containerName,
 	}
+
+	// Pulling before creating container
+	pullImage(cli, imageName)
 
 	resp, err := cli.ContainerCreate(ctx, opts)
 	if err != nil {
