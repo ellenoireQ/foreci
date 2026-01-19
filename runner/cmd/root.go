@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 
+	"foreci/runner/cmd/create"
 	"foreci/runner/cmd/images"
 	"foreci/runner/cmd/start"
 
@@ -33,4 +34,5 @@ func Execute() {
 func init() {
 	rootCmd.AddCommand(images.ImagesCmd)
 	rootCmd.AddCommand(start.StartCmd)
+	rootCmd.AddCommand(create.CreateCmd)
 }

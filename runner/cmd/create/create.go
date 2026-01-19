@@ -1,0 +1,220 @@
+// Copyright 2026 Fitrian Musya
+// SPDX-License-Identifier: MIT
+
+package create
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/netip"
+	"os"
+	"strings"
+
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/client"
+	"github.com/spf13/cobra"
+)
+
+type CreateResult struct {
+	ContainerID   string `json:"container_id"`
+	ContainerName string `json:"container_name"`
+	Status        string `json:"status"`
+	Error         string `json:"error,omitempty"`
+}
+
+var (
+	imageName     string
+	containerName string
+	hostname      string
+	ports         string
+	environment   string
+	volumes       string
+	networks      string
+	restart       string
+	autoStart     bool
+)
+
+var CreateCmd = &cobra.Command{
+	Use:   "create",
+	Short: "Create a Docker container",
+	Long:  `Create a Docker container from docker-compose configuration`,
+	Run: func(cmd *cobra.Command, args []string) {
+		createContainer()
+	},
+}
+
+func init() {
+	CreateCmd.Flags().StringVarP(&imageName, "image", "i", "", "Image name (required)")
+	CreateCmd.Flags().StringVarP(&containerName, "name", "n", "", "Container name")
+	CreateCmd.Flags().StringVarP(&hostname, "hostname", "H", "", "Container hostname")
+	CreateCmd.Flags().StringVarP(&ports, "ports", "p", "", "Port mappings (comma-separated, e.g. '8080:80,443:443')")
+	CreateCmd.Flags().StringVarP(&environment, "env", "e", "", "Environment variables (comma-separated, e.g. 'FOO=bar,BAZ=qux')")
+	CreateCmd.Flags().StringVarP(&volumes, "volumes", "v", "", "Volume mounts (comma-separated, e.g. '/host:/container,/data:/data')")
+	CreateCmd.Flags().StringVarP(&networks, "networks", "N", "", "Networks (comma-separated)")
+	CreateCmd.Flags().StringVarP(&restart, "restart", "r", "", "Restart policy (no, always, unless-stopped, on-failure)")
+	CreateCmd.Flags().BoolVarP(&autoStart, "start", "s", false, "Auto-start container after creation")
+	CreateCmd.MarkFlagRequired("image")
+}
+
+func outputJSON(result CreateResult) {
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.Encode(result)
+}
+
+func parsePortBindings(portsStr string) (network.PortSet, network.PortMap) {
+	exposedPorts := make(network.PortSet)
+	portBindings := make(network.PortMap)
+
+	if portsStr == "" {
+		return exposedPorts, portBindings
+	}
+
+	portPairs := strings.Split(portsStr, ",")
+	for _, pair := range portPairs {
+		pair = strings.TrimSpace(pair)
+		if pair == "" {
+			continue
+		}
+
+		parts := strings.Split(pair, ":")
+		var hostPort, containerPort string
+
+		if len(parts) == 2 {
+			hostPort = parts[0]
+			containerPort = parts[1]
+		} else if len(parts) == 1 {
+			hostPort = parts[0]
+			containerPort = parts[0]
+		} else {
+			continue
+		}
+
+		port, err := network.ParsePort(containerPort + "/tcp")
+		if err != nil {
+			continue
+		}
+		exposedPorts[port] = struct{}{}
+		portBindings[port] = []network.PortBinding{
+			{HostIP: netip.MustParseAddr("0.0.0.0"), HostPort: hostPort},
+		}
+	}
+
+	return exposedPorts, portBindings
+}
+
+func parseEnvVars(envStr string) []string {
+	if envStr == "" {
+		return nil
+	}
+
+	envVars := strings.Split(envStr, ",")
+	var result []string
+	for _, env := range envVars {
+		env = strings.TrimSpace(env)
+		if env != "" {
+			result = append(result, env)
+		}
+	}
+	return result
+}
+
+func parseVolumes(volumesStr string) []string {
+	if volumesStr == "" {
+		return nil
+	}
+
+	vols := strings.Split(volumesStr, ",")
+	var result []string
+	for _, vol := range vols {
+		vol = strings.TrimSpace(vol)
+		if vol != "" {
+			result = append(result, vol)
+		}
+	}
+	return result
+}
+
+func getRestartPolicy(policyStr string) container.RestartPolicy {
+	switch policyStr {
+	case "always":
+		return container.RestartPolicy{Name: container.RestartPolicyAlways}
+	case "unless-stopped":
+		return container.RestartPolicy{Name: container.RestartPolicyUnlessStopped}
+	case "on-failure":
+		return container.RestartPolicy{Name: container.RestartPolicyOnFailure}
+	default:
+		return container.RestartPolicy{Name: container.RestartPolicyDisabled}
+	}
+}
+
+func createContainer() {
+	ctx := context.Background()
+
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		outputJSON(CreateResult{
+			ContainerName: containerName,
+			Status:        "error",
+			Error:         fmt.Sprintf("failed to create docker client: %v", err),
+		})
+		return
+	}
+	defer cli.Close()
+
+	exposedPorts, portBindings := parsePortBindings(ports)
+	envVars := parseEnvVars(environment)
+	binds := parseVolumes(volumes)
+	restartPolicy := getRestartPolicy(restart)
+
+	config := &container.Config{
+		Image:        imageName,
+		Hostname:     hostname,
+		Env:          envVars,
+		ExposedPorts: exposedPorts,
+	}
+
+	hostConfig := &container.HostConfig{
+		PortBindings:  portBindings,
+		Binds:         binds,
+		RestartPolicy: restartPolicy,
+	}
+
+	networkConfig := &network.NetworkingConfig{}
+
+	opts := client.ContainerCreateOptions{
+		Config:           config,
+		HostConfig:       hostConfig,
+		NetworkingConfig: networkConfig,
+		Name:             containerName,
+	}
+
+	resp, err := cli.ContainerCreate(ctx, opts)
+	if err != nil {
+		outputJSON(CreateResult{
+			ContainerName: containerName,
+			Status:        "error",
+			Error:         fmt.Sprintf("failed to create container: %v", err),
+		})
+		return
+	}
+
+	result := CreateResult{
+		ContainerID:   resp.ID,
+		ContainerName: containerName,
+		Status:        "created",
+	}
+
+	if autoStart {
+		_, err = cli.ContainerStart(ctx, resp.ID, client.ContainerStartOptions{})
+		if err != nil {
+			result.Status = "created"
+			result.Error = fmt.Sprintf("container created but failed to start: %v", err)
+		} else {
+			result.Status = "running"
+		}
+	}
+
+	outputJSON(result)
+}
