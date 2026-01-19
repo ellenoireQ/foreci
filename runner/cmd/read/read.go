@@ -111,21 +111,34 @@ func ReadCompose(path string) {
 			dockerfile = svc.Build.Dockerfile
 		}
 
+		var ports []string
 		for _, port := range svc.Ports {
-			outputJSON(DockerCompose{
-				Name:          project.Name,
-				Service:       svc.Name,
-				Image:         svc.Image,
-				Ports:         port.Published,
-				ContainerName: svc.ContainerName,
-				Hostname:      svc.Hostname,
-				BuildContext:  buildContext,
-				Dockerfile:    dockerfile,
-				Environment:   envVars,
-				Volumes:       volumes,
-				Networks:      networks,
-				Restart:       svc.Restart,
-			})
+			if port.Published != "" {
+				ports = append(ports, port.Published)
+			}
 		}
+
+		var portsStr string
+		if len(ports) > 0 {
+			portsStr = ports[0]
+			for i := 1; i < len(ports); i++ {
+				portsStr += ", " + ports[i]
+			}
+		}
+
+		outputJSON(DockerCompose{
+			Name:          project.Name,
+			Service:       svc.Name,
+			Image:         svc.Image,
+			Ports:         portsStr,
+			ContainerName: svc.ContainerName,
+			Hostname:      svc.Hostname,
+			BuildContext:  buildContext,
+			Dockerfile:    dockerfile,
+			Environment:   envVars,
+			Volumes:       volumes,
+			Networks:      networks,
+			Restart:       svc.Restart,
+		})
 	}
 }
