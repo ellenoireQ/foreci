@@ -41,9 +41,11 @@ async fn main() -> io::Result<()> {
     }
 
     loop {
+        app.poll_logs();
+
         terminal.draw(|f| draw_ui(f, &mut app))?;
 
-        if event::poll(Duration::from_millis(100))? {
+        if event::poll(Duration::from_millis(50))? {
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
                     match key.code {

@@ -4,6 +4,7 @@
 use ratatui::widgets::ListState;
 use serde::Deserialize;
 use std::process::Stdio;
+use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
 use crate::log::log::{LogList, LogType};
@@ -58,6 +59,14 @@ struct ImageJson {
     size: String,
 }
 
+#[derive(Deserialize, Default)]
+#[serde(default)]
+pub struct ImageStatus {
+    pub image: String,
+    pub status: String,
+    pub progress: Option<String>,
+}
+
 #[derive(Deserialize)]
 pub struct FilePath {
     filepath: String,
@@ -76,6 +85,7 @@ pub struct App {
     pub images: Vec<DockerImage>,
     pub image_state: ListState,
     pub image_idx: Option<usize>,
+    pub log_rx: Option<tokio::sync::mpsc::Receiver<String>>,
 }
 
 impl Default for App {
@@ -93,6 +103,7 @@ impl Default for App {
             images: Vec::new(),
             image_state: ListState::default(),
             image_idx: None,
+            log_rx: None,
         }
     }
 }
@@ -368,35 +379,28 @@ impl App {
                             args.push(container.restart.clone());
                         }
 
-                        match Command::new("./bin/runner")
-                            .args(&args)
-                            .stdout(Stdio::piped())
-                            .stderr(Stdio::piped())
-                            .output()
-                            .await
-                        {
-                            Ok(output) => {
-                                let stdout = String::from_utf8_lossy(&output.stdout);
-                                let stderr = String::from_utf8_lossy(&output.stderr);
+                        let (tx, rx) = tokio::sync::mpsc::channel::<String>(100);
+                        self.log_rx = Some(rx);
+                        self.loading = true;
 
-                                if output.status.success() {
-                                    self.log.print_mes(
-                                        LogType::Info,
-                                        &format!("Started: {}", stdout.trim()),
-                                    );
-                                    self.log.local(stdout.trim()).await.unwrap_or_default();
-                                } else {
-                                    self.log.print_mes(
-                                        LogType::Info,
-                                        &format!("Error: {}", stderr.trim()),
-                                    );
+                        tokio::spawn(async move {
+                            if let Ok(mut child) = Command::new("./bin/runner")
+                                .args(&args)
+                                .stdout(Stdio::piped())
+                                .stderr(Stdio::piped())
+                                .spawn()
+                            {
+                                if let Some(stdout) = child.stdout.take() {
+                                    let mut reader = BufReader::new(stdout).lines();
+
+                                    while let Ok(Some(line)) = reader.next_line().await {
+                                        let _ = tx.send(line).await;
+                                    }
                                 }
+                                let _ = child.wait().await;
                             }
-                            Err(e) => {
-                                self.log
-                                    .print_mes(LogType::Info, &format!("Failed to run: {}", e));
-                            }
-                        }
+                            let _ = tx.send("__DONE__".to_string()).await;
+                        });
                     }
                     Some(MenuAction::Stop) => {
                         self.log
@@ -424,5 +428,68 @@ impl App {
         self.details_state = true;
         let i = format!("Boolean state: {}", self.details_state);
         self.log.print_mes(LogType::Info, i.as_str());
+    }
+
+    pub fn poll_logs(&mut self) -> bool {
+        let mut has_updates = false;
+
+        if let Some(ref mut rx) = self.log_rx {
+            while let Ok(line) = rx.try_recv() {
+                has_updates = true;
+
+                if line == "__DONE__" {
+                    self.loading = false;
+                    self.log_rx = None;
+                    break;
+                }
+
+                if let Ok(status) = serde_json::from_str::<ImageStatus>(&line) {
+                    match status.status.as_str() {
+                        "pulling" => {
+                            self.log.print_mes(
+                                LogType::Info,
+                                &format!("Pulling image: {}", status.image),
+                            );
+                        }
+                        "downloading" => {
+                            if let Some(progress) = &status.progress {
+                                self.log.print_mes(LogType::Info, progress);
+                            } else {
+                                self.log.print_mes(LogType::Info, "Downloading...");
+                            }
+                        }
+                        "completed" => {
+                            self.log.print_mes(
+                                LogType::Info,
+                                &format!("Pull complete: {}", status.image),
+                            );
+                        }
+                        "exists" => {
+                            self.log.print_mes(
+                                LogType::Info,
+                                &format!("Image exists: {}", status.image),
+                            );
+                        }
+                        "error" => {
+                            self.log.print_mes(
+                                LogType::Error,
+                                &format!("Pull failed: {}", status.image),
+                            );
+                        }
+                        "running" | "created" => {
+                            self.log
+                                .print_mes(LogType::Info, &format!("Container {}", status.status));
+                        }
+                        _ => {
+                            self.log.print_mes(LogType::Info, &line);
+                        }
+                    }
+                } else {
+                    self.log.print_mes(LogType::Info, &line);
+                }
+            }
+        }
+
+        has_updates
     }
 }
