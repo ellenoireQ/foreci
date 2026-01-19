@@ -1,6 +1,10 @@
 // Copyright 2026 Fitrian Musya
 // SPDX-License-Identifier: MIT
 
+use std::io::{self, Result};
+
+use tokio::{fs::File, io::AsyncWriteExt};
+
 pub enum LogType {
     Info,
     Error,
@@ -47,5 +51,13 @@ impl LogList {
         } else {
             format!("{} {}", self.log.status, self.log.message)
         }
+    }
+
+    pub async fn local(&mut self, message: &str) -> io::Result<()> {
+        let mut file = File::create("/tmp/foreci.txt").await?;
+
+        file.write_all(message.as_bytes()).await?;
+
+        Ok(())
     }
 }
