@@ -9,6 +9,7 @@ import (
 
 	"foreci/runner/cmd/create"
 	"foreci/runner/cmd/images"
+	"foreci/runner/cmd/list"
 	"foreci/runner/cmd/start"
 
 	"github.com/spf13/cobra"
@@ -35,4 +36,5 @@ func init() {
 	rootCmd.AddCommand(images.ImagesCmd)
 	rootCmd.AddCommand(start.StartCmd)
 	rootCmd.AddCommand(create.CreateCmd)
+	rootCmd.AddCommand(list.ListCmd)
 }
