@@ -335,8 +335,9 @@ fn draw_footer(f: &mut Frame, area: ratatui::layout::Rect, app: &App) {
     )
     .block(Block::default().borders(Borders::ALL));
 
-    let terus = app.log.to_display_string();
-    let footer1 = Paragraph::new(terus).block(Block::default().borders(Borders::ALL).title("Logs"));
+    let footersc_title = app.log.to_display_string();
+    let footer1 =
+        Paragraph::new(footersc_title).block(Block::default().borders(Borders::ALL).title("Logs"));
 
     let row = Layout::default()
         .direction(Direction::Horizontal)
