@@ -384,6 +384,7 @@ impl App {
                                         LogType::Info,
                                         &format!("Started: {}", stdout.trim()),
                                     );
+                                    self.log.local(stdout.trim()).await.unwrap_or_default();
                                 } else {
                                     self.log.print_mes(
                                         LogType::Info,
