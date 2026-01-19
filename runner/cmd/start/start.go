@@ -38,7 +38,7 @@ func outputJSON(result StartResult) {
 func startContainer(containerID string) {
 	ctx := context.Background()
 
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	cli, err := client.New(client.FromEnv)
 	if err != nil {
 		outputJSON(StartResult{
 			ContainerID: containerID,
