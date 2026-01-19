@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/netip"
 	"os"
 	"strings"
@@ -169,18 +168,63 @@ func imageExists(cli *client.Client, imageName string) bool {
 func pullImage(cli *client.Client, imageName string) error {
 	// Skip if image already exists
 	if imageExists(cli, imageName) {
+		outputPullProgress(PullProgress{
+			Image:  imageName,
+			Status: "exists",
+		})
 		return nil
 	}
 
+	outputPullProgress(PullProgress{
+		Image:  imageName,
+		Status: "pulling",
+	})
+
 	out, err := cli.ImagePull(context.Background(), imageName, client.ImagePullOptions{})
 	if err != nil {
+		outputPullProgress(PullProgress{
+			Image:  imageName,
+			Status: "error",
+			Error:  err.Error(),
+		})
 		return err
 	}
 	defer out.Close()
 
-	io.Copy(io.Discard, out)
+	// Read and parse progress from Docker
+	decoder := json.NewDecoder(out)
+	for {
+		var progress map[string]interface{}
+		if err := decoder.Decode(&progress); err != nil {
+			break
+		}
+		if status, ok := progress["status"].(string); ok {
+			outputPullProgress(PullProgress{
+				Image:    imageName,
+				Status:   "downloading",
+				Progress: status,
+			})
+		}
+	}
+
+	outputPullProgress(PullProgress{
+		Image:  imageName,
+		Status: "completed",
+	})
 
 	return nil
+}
+
+type PullProgress struct {
+	Image    string `json:"image"`
+	Status   string `json:"status"`
+	Progress string `json:"progress,omitempty"`
+	Error    string `json:"error,omitempty"`
+}
+
+func outputPullProgress(p PullProgress) {
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.Encode(p)
 }
 func createContainer() {
 	ctx := context.Background()
