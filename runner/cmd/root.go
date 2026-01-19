@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"foreci/runner/cmd/images"
+	"foreci/runner/cmd/start"
 
 	"github.com/spf13/cobra"
 )
@@ -31,4 +32,5 @@ func Execute() {
 
 func init() {
 	rootCmd.AddCommand(images.ImagesCmd)
+	rootCmd.AddCommand(start.StartCmd)
 }
