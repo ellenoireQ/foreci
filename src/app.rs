@@ -86,6 +86,7 @@ pub struct App {
     pub image_state: ListState,
     pub image_idx: Option<usize>,
     pub log_rx: Option<tokio::sync::mpsc::Receiver<String>>,
+    pub log_scroll: u16,
 }
 
 impl Default for App {
@@ -104,6 +105,7 @@ impl Default for App {
             image_state: ListState::default(),
             image_idx: None,
             log_rx: None,
+            log_scroll: 0,
         }
     }
 }
@@ -491,5 +493,18 @@ impl App {
         }
 
         has_updates
+    }
+
+    pub fn scroll_log_left(&mut self) {
+        if self.log_scroll > 0 {
+            self.log_scroll = self.log_scroll.saturating_sub(5);
+        }
+    }
+
+    pub fn scroll_log_right(&mut self) {
+        let max_scroll = self.log.to_display_string().len() as u16;
+        if self.log_scroll < max_scroll {
+            self.log_scroll = self.log_scroll.saturating_add(5);
+        }
     }
 }

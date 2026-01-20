@@ -329,15 +329,14 @@ fn draw_content(f: &mut Frame, area: ratatui::layout::Rect, app: &mut App) {
     }
 }
 
-fn draw_footer(f: &mut Frame, area: ratatui::layout::Rect, app: &App) {
-    let footer = Paragraph::new(
-        "q: Quit | r: Run Job | Tab: Next | Shift+Tab: Prev | ↕ or k/j : Select List",
-    )
-    .block(Block::default().borders(Borders::ALL));
+fn draw_footer(f: &mut Frame, area: ratatui::layout::Rect, app: &mut App) {
+    let footer = Paragraph::new("q: Quit | r: Refresh | Tab: Next | ←/→: Scroll Log")
+        .block(Block::default().borders(Borders::ALL));
 
     let footersc_title = app.log.to_display_string();
-    let footer1 =
-        Paragraph::new(footersc_title).block(Block::default().borders(Borders::ALL).title("Logs"));
+    let footer1 = Paragraph::new(footersc_title)
+        .block(Block::default().borders(Borders::ALL).title("Logs"))
+        .scroll((0, app.log_scroll));
 
     let row = Layout::default()
         .direction(Direction::Horizontal)

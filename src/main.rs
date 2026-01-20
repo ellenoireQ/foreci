@@ -101,8 +101,20 @@ async fn main() -> io::Result<()> {
                             app.expanded_index = None;
                             app.menu_selection = 0;
                         }
-                        KeyCode::Left | KeyCode::Char('h') => app.menu_prev(),
-                        KeyCode::Right | KeyCode::Char('l') => app.menu_next(),
+                        KeyCode::Left | KeyCode::Char('h') => {
+                            if app.expanded_index.is_some() {
+                                app.menu_prev();
+                            } else {
+                                app.scroll_log_left();
+                            }
+                        }
+                        KeyCode::Right | KeyCode::Char('l') => {
+                            if app.expanded_index.is_some() {
+                                app.menu_next();
+                            } else {
+                                app.scroll_log_right();
+                            }
+                        }
                         _ => {}
                     }
                 }
