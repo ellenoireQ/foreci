@@ -65,6 +65,7 @@ pub struct ImageStatus {
     pub image: String,
     pub status: String,
     pub progress: Option<String>,
+    pub error: String,
 }
 
 #[derive(Deserialize)]
@@ -475,7 +476,7 @@ impl App {
                         "error" => {
                             self.log.print_mes(
                                 LogType::Error,
-                                &format!("Pull failed: {}", status.image),
+                                &format!("Pull failed: {}", status.error),
                             );
                         }
                         "running" | "created" => {
