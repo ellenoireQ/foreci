@@ -6,5 +6,13 @@ A continuous integration tool designed for easy integration with docker build sy
 ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 ![Docker](https://img.shields.io/badge/license-MIT-%230db7ed.svg?style=for-the-badge&logo=mit&logoColor=white)
 
+## Todo list
+- [X] Integrating golang code in rust
+- [X] Colored User Interface
+- [ ] Integrating graph while pulling images
+- [ ] Display colored log in footer log section
+- [ ] Making UI in deployment page and integrating the runner
+- [ ] Making UI in Logs page and integrating the runner
+- [ ] Making UI in Settings page and integrating the runner
 
 ### read: [Click here](./docs/README.md)
