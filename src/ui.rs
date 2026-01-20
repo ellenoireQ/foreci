@@ -19,7 +19,7 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
         .constraints([
             Constraint::Length(3),
             Constraint::Min(1),
-            Constraint::Length(3),
+            Constraint::Length(6),
         ])
         .split(f.area());
 
@@ -330,19 +330,27 @@ fn draw_content(f: &mut Frame, area: ratatui::layout::Rect, app: &mut App) {
 }
 
 fn draw_footer(f: &mut Frame, area: ratatui::layout::Rect, app: &mut App) {
-    let footer = Paragraph::new("q: Quit | r: Refresh | Tab: Next | ←/→: Scroll Log")
-        .block(Block::default().borders(Borders::ALL));
+    let rows_column = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(3), Constraint::Length(3)])
+        .split(area);
+
+    let footer = Paragraph::new(
+        "q: Quit | r: Refresh | Tab: Switch | ↕: Select | ←/→: Scroll Log | Enter: Menu",
+    )
+    .block(Block::default().borders(Borders::NONE))
+    .centered();
 
     let footersc_title = app.log.to_display_string();
     let footer1 = Paragraph::new(footersc_title)
-        .block(Block::default().borders(Borders::ALL).title("Logs"))
+        .block(
+            Block::default()
+                .border_type(ratatui::widgets::BorderType::Rounded)
+                .borders(Borders::ALL)
+                .title("Logs"),
+        )
         .scroll((0, app.log_scroll));
 
-    let row = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-        .split(area);
-
-    f.render_widget(footer, row[0]);
-    f.render_widget(footer1, row[1]);
+    f.render_widget(footer, rows_column[1]);
+    f.render_widget(footer1, rows_column[0]);
 }
