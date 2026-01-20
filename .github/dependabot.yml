@@ -8,3 +8,7 @@ updates:
       actions:
         patterns:
           - "*"
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "daily"
