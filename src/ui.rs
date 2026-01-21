@@ -296,6 +296,67 @@ fn draw_images(f: &mut Frame, area: Rect, app: &mut App) {
     }
 }
 
+fn draw_analytics(f: &mut Frame, area: Rect, _app: &mut App) {
+    let rows = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .split(area);
+
+    let top_cols = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .split(rows[0]);
+
+    let bottom_cols = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .split(rows[1]);
+
+    let top_left_block = Block::default()
+        .border_type(ratatui::widgets::BorderType::Rounded)
+        .borders(Borders::ALL)
+        .title("CPU Usage");
+    let top_left_content = Paragraph::new("CPU: 45%\nCores: 8\nLoad: 2.34")
+        .block(Block::default())
+        .style(Style::default().fg(Color::Green));
+    f.render_widget(top_left_block.clone(), top_cols[0]);
+    f.render_widget(top_left_content, top_left_block.inner(top_cols[0]));
+
+    let top_right_block = Block::default()
+        .border_type(ratatui::widgets::BorderType::Rounded)
+        .borders(Borders::ALL)
+        .title("Memory Usage");
+    let top_right_content = Paragraph::new("Used: 8.2 GB\nFree: 7.8 GB\nTotal: 16 GB")
+        .block(Block::default())
+        .style(Style::default().fg(Color::Cyan));
+    f.render_widget(top_right_block.clone(), top_cols[1]);
+    f.render_widget(top_right_content, top_right_block.inner(top_cols[1]));
+
+    let bottom_left_block = Block::default()
+        .border_type(ratatui::widgets::BorderType::Rounded)
+        .borders(Borders::ALL)
+        .title("Network I/O");
+    let bottom_left_content =
+        Paragraph::new("↓ Download: 1.2 MB/s\n↑ Upload: 0.5 MB/s\nTotal: 45 GB")
+            .block(Block::default())
+            .style(Style::default().fg(Color::Yellow));
+    f.render_widget(bottom_left_block.clone(), bottom_cols[0]);
+    f.render_widget(bottom_left_content, bottom_left_block.inner(bottom_cols[0]));
+
+    let bottom_right_block = Block::default()
+        .border_type(ratatui::widgets::BorderType::Rounded)
+        .borders(Borders::ALL)
+        .title("Disk Usage");
+    let bottom_right_content = Paragraph::new("Used: 234 GB\nFree: 266 GB\nTotal: 500 GB")
+        .block(Block::default())
+        .style(Style::default().fg(Color::Magenta));
+    f.render_widget(bottom_right_block.clone(), bottom_cols[1]);
+    f.render_widget(
+        bottom_right_content,
+        bottom_right_block.inner(bottom_cols[1]),
+    );
+}
+
 fn draw_content(f: &mut Frame, area: ratatui::layout::Rect, app: &mut App) {
     let title = match app.current_tab {
         Tab::Containers => "Containers",
@@ -317,9 +378,7 @@ fn draw_content(f: &mut Frame, area: ratatui::layout::Rect, app: &mut App) {
     match app.current_tab {
         Tab::Containers => draw_containers(f, inner, app),
         Tab::Images => draw_images(f, inner, app),
-        Tab::Deployments => {
-            //
-        }
+        Tab::Deployments => draw_analytics(f, inner, app),
         Tab::Logs => {
             //
         }
