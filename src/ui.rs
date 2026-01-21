@@ -29,7 +29,7 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
 }
 
 fn draw_tabs(f: &mut Frame, area: ratatui::layout::Rect, app: &App) {
-    let titles = vec!["Containers", "Images", "Deployments", "Logs", "Settings"];
+    let titles = vec!["Containers", "Images", "Analytics", "Logs", "Settings"];
 
     let selected = match app.current_tab {
         Tab::Containers => 0,
@@ -300,7 +300,7 @@ fn draw_content(f: &mut Frame, area: ratatui::layout::Rect, app: &mut App) {
     let title = match app.current_tab {
         Tab::Containers => "Containers",
         Tab::Images => "Images",
-        Tab::Deployments => "Deployments",
+        Tab::Deployments => "Analytics",
         Tab::Logs => "Logs",
         Tab::Settings => "Settings",
     };

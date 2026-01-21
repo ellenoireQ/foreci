@@ -11,7 +11,7 @@ A continuous integration tool designed for easy integration with docker build sy
 - [X] Colored User Interface
 - [ ] Integrating graph while pulling images
 - [ ] Display colored log in footer log section
-- [ ] Making UI in deployment page and integrating the runner
+- [ ] Making UI in analytics page and integrating the runner
 - [ ] Making UI in Logs page and integrating the runner
 - [ ] Making UI in Settings page and integrating the runner
 
