@@ -518,6 +518,16 @@ impl App {
         }
     }
 
+    /* Part of analytics
+     *
+     * CPU Usage
+     * Get cpu usage from x for reading and also supporting for updating cpu scrolling for scroll
+     * effect in user interface
+     *
+     * @param
+     * update_cpu_data(u64) ref: main.rs => update_cpu_data(value);
+     * update_cpu_scroll(void) ref: ui.rs => update_cpu_scroll();
+     * */
     pub fn update_cpu_data(&mut self, value: u64) {
         self.cpu_data.push(value);
     }
