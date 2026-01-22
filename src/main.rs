@@ -9,6 +9,7 @@ use crossterm::{
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
+use rand::Rng;
 use ratatui::{Terminal, backend::CrosstermBackend};
 use std::io;
 use std::time::Duration;
@@ -41,8 +42,10 @@ async fn main() -> io::Result<()> {
     }
 
     loop {
+        let mut rng = rand::rng();
+        let random = rng.random_range(1..=100);
         app.poll_logs();
-
+        app.update_cpu_data(random);
         terminal.draw(|f| draw_ui(f, &mut app))?;
 
         if event::poll(Duration::from_millis(50))? {

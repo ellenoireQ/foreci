@@ -312,12 +312,6 @@ fn draw_analytics(f: &mut Frame, area: Rect, _app: &mut App) {
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(rows[1]);
 
-    let mut cpu_data: Vec<u64> = vec![
-        20, 35, 50, 65, 80, 90, 85, 70, 55, 40, 30, 25, 35, 50, 70, 85, 95, 90, 75, 55, 35, 20, 15,
-        25, 40, 60, 75, 85, 80, 65, 45, 30, 25, 40, 55, 70, 80, 75, 60, 45, 35, 30, 45, 65, 80, 90,
-        85, 70,
-    ];
-
     let top_left_block = Block::default()
         .border_type(ratatui::widgets::BorderType::Rounded)
         .borders(Borders::ALL)
@@ -325,7 +319,7 @@ fn draw_analytics(f: &mut Frame, area: Rect, _app: &mut App) {
 
     let cpu_sparkline = Sparkline::default()
         .block(Block::default())
-        .data(&cpu_data)
+        .data(&_app.cpu_data)
         .max(100)
         .style(Style::default().fg(Color::Green));
 

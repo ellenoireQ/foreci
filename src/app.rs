@@ -88,6 +88,9 @@ pub struct App {
     pub image_idx: Option<usize>,
     pub log_rx: Option<tokio::sync::mpsc::Receiver<String>>,
     pub log_scroll: u16,
+
+    // Analytics
+    pub cpu_data: Vec<u64>,
 }
 
 impl Default for App {
@@ -107,6 +110,7 @@ impl Default for App {
             image_idx: None,
             log_rx: None,
             log_scroll: 0,
+            cpu_data: vec![],
         }
     }
 }
@@ -507,5 +511,9 @@ impl App {
         if self.log_scroll < max_scroll {
             self.log_scroll = self.log_scroll.saturating_add(5);
         }
+    }
+
+    pub fn update_cpu_data(&mut self, value: u64) {
+        self.cpu_data.push(value);
     }
 }
