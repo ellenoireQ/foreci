@@ -295,6 +295,19 @@ fn draw_images(f: &mut Frame, area: Rect, app: &mut App) {
         }
     }
 }
+fn sparkline_window(_app: &mut App, width: usize, scroll: usize) -> Vec<u64> {
+    let len = _app.cpu_data.len();
+
+    let end = len.saturating_sub(scroll);
+    let start = end.saturating_sub(width);
+
+    let values = if start < end {
+        _app.cpu_data[start..end].to_vec()
+    } else {
+        vec![]
+    };
+    values
+}
 
 fn draw_analytics(f: &mut Frame, area: Rect, _app: &mut App) {
     let rows = Layout::default()
@@ -317,9 +330,18 @@ fn draw_analytics(f: &mut Frame, area: Rect, _app: &mut App) {
         .borders(Borders::ALL)
         .title("CPU Usage");
 
+    //    let mut speed_scroll: u64 = 0;
+    //    speed_scroll += 20;
+    _app.update_cpu_scroll();
+    let values = sparkline_window(
+        _app,
+        top_left_block.inner(top_cols[0]).width as usize,
+        _app.scroll_offset,
+    );
+
     let cpu_sparkline = Sparkline::default()
         .block(Block::default())
-        .data(&_app.cpu_data)
+        .data(&values)
         .max(100)
         .style(Style::default().fg(Color::Green));
 

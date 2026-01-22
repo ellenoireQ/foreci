@@ -4,6 +4,7 @@
 use ratatui::widgets::ListState;
 use serde::Deserialize;
 use std::process::Stdio;
+use std::time::{Duration, Instant};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
@@ -91,6 +92,8 @@ pub struct App {
 
     // Analytics
     pub cpu_data: Vec<u64>,
+    last_scroll: Instant,
+    pub scroll_offset: usize,
 }
 
 impl Default for App {
@@ -111,6 +114,8 @@ impl Default for App {
             log_rx: None,
             log_scroll: 0,
             cpu_data: vec![],
+            last_scroll: Instant::now(),
+            scroll_offset: 0,
         }
     }
 }
@@ -515,5 +520,12 @@ impl App {
 
     pub fn update_cpu_data(&mut self, value: u64) {
         self.cpu_data.push(value);
+    }
+    pub fn update_cpu_scroll(&mut self) {
+        let now = Instant::now();
+        if now.duration_since(self.last_scroll) > Duration::from_millis(100) {
+            self.scroll_offset = (self.scroll_offset + 1) % self.cpu_data.len();
+            self.last_scroll = now;
+        }
     }
 }
