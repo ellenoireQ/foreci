@@ -295,18 +295,14 @@ fn draw_images(f: &mut Frame, area: Rect, app: &mut App) {
         }
     }
 }
-fn sparkline_window(_app: &mut App, width: usize, scroll: usize) -> Vec<u64> {
+fn sparkline_window(_app: &mut App, width: usize, _scroll: usize) -> Vec<u64> {
     let len = _app.cpu_data.len();
+    if len == 0 {
+        return vec![];
+    }
 
-    let end = len.saturating_sub(scroll);
-    let start = end.saturating_sub(width);
-
-    let values = if start < end {
-        _app.cpu_data[start..end].to_vec()
-    } else {
-        vec![]
-    };
-    values
+    let start = len.saturating_sub(width);
+    _app.cpu_data[start..len].to_vec()
 }
 
 fn draw_analytics(f: &mut Frame, area: Rect, _app: &mut App) {
@@ -339,10 +335,12 @@ fn draw_analytics(f: &mut Frame, area: Rect, _app: &mut App) {
         _app.scroll_offset,
     );
 
+    let max_val = values.iter().copied().max().unwrap_or(10).max(10);
+
     let cpu_sparkline = Sparkline::default()
         .block(Block::default())
         .data(&values)
-        .max(100)
+        .max(max_val)
         .style(Style::default().fg(Color::Green));
 
     f.render_widget(top_left_block.clone(), top_cols[0]);

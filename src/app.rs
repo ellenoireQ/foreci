@@ -74,6 +74,15 @@ pub struct FilePath {
     filepath: String,
 }
 
+#[derive(Deserialize)]
+pub struct CPUUsage {
+    pub container_id: String,
+    pub cpu_percent: f64,
+    pub mem_usage: u64,
+    pub mem_limit: u64,
+    pub mem_percent: f64,
+}
+
 pub struct App {
     pub current_tab: Tab,
     pub containers: Vec<DockerCompose>,
@@ -91,6 +100,8 @@ pub struct App {
     pub log_scroll: u16,
 
     // Analytics
+    pub analytics_rx: Option<tokio::sync::mpsc::Receiver<CPUUsage>>,
+    pub analytics: CPUUsage,
     pub cpu_data: Vec<u64>,
     last_scroll: Instant,
     pub scroll_offset: usize,
@@ -113,9 +124,17 @@ impl Default for App {
             image_idx: None,
             log_rx: None,
             log_scroll: 0,
+            analytics_rx: None,
             cpu_data: vec![],
             last_scroll: Instant::now(),
             scroll_offset: 0,
+            analytics: CPUUsage {
+                container_id: "".to_string(),
+                cpu_percent: 0.0,
+                mem_usage: 0,
+                mem_limit: 0,
+                mem_percent: 0.0,
+            },
         }
     }
 }
@@ -532,10 +551,72 @@ impl App {
         self.cpu_data.push(value);
     }
     pub fn update_cpu_scroll(&mut self) {
+        if self.cpu_data.is_empty() {
+            return;
+        }
         let now = Instant::now();
         if now.duration_since(self.last_scroll) > Duration::from_millis(100) {
             self.scroll_offset = (self.scroll_offset + 1) % self.cpu_data.len();
             self.last_scroll = now;
         }
+    }
+
+    pub fn start_analytics_stream(&mut self, container_id: &str) {
+        if self.analytics_rx.is_some() {
+            return;
+        }
+
+        let (tx, rx) = tokio::sync::mpsc::channel::<CPUUsage>(100);
+        self.analytics_rx = Some(rx);
+
+        let container_id = container_id.to_string();
+
+        tokio::spawn(async move {
+            if let Ok(mut child) = Command::new("./bin/runner")
+                .args(["stream", &container_id])
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
+            {
+                if let Some(stdout) = child.stdout.take() {
+                    let mut reader = BufReader::new(stdout).lines();
+
+                    while let Ok(Some(line)) = reader.next_line().await {
+                        if let Ok(parsed) = serde_json::from_str::<CPUUsage>(&line) {
+                            if tx.send(parsed).await.is_err() {
+                                break; // Receiver dropped
+                            }
+                        }
+                    }
+                }
+                let _ = child.wait().await;
+            }
+        });
+    }
+
+    pub fn poll_analytics(&mut self) -> bool {
+        let mut updates = Vec::new();
+
+        if let Some(ref mut rx) = self.analytics_rx {
+            while let Ok(usage) = rx.try_recv() {
+                updates.push(usage);
+            }
+        }
+
+        let has_updates = !updates.is_empty();
+        for usage in updates {
+            // Scale parsing the percentage 0.12 -> 12
+            // CPU percentage while greater than 0.01 will returning cpu_percent if no then
+            // returnning (0.1)
+            let value = if usage.cpu_percent > 0.01 {
+                (usage.cpu_percent * 100.0).round() as u64
+            } else {
+                (0.1 as f64 * 100.0).round() as u64
+            };
+            self.cpu_data.push(value);
+            self.analytics = usage;
+        }
+
+        has_updates
     }
 }

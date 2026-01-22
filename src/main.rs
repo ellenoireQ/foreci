@@ -42,10 +42,14 @@ async fn main() -> io::Result<()> {
     }
 
     loop {
-        let mut rng = rand::rng();
-        let random = rng.random_range(1..=100);
         app.poll_logs();
-        app.update_cpu_data(random);
+        if !app.loading {
+            app.log.print_mes(LogType::Info, "Statrting to read");
+
+            app.start_analytics_stream("bb82771bbb5d");
+            app.poll_analytics();
+        }
+
         terminal.draw(|f| draw_ui(f, &mut app))?;
 
         if event::poll(Duration::from_millis(50))? {

@@ -30,6 +30,7 @@ type ContainerStats struct {
 			TotalUsage uint64 `json:"total_usage"`
 		} `json:"cpu_usage"`
 		SystemCPUUsage uint64 `json:"system_cpu_usage"`
+		OnlineCPUs     uint64 `json:"online_cpus"`
 	} `json:"cpu_stats"`
 	PreCPUStats struct {
 		CPUUsage struct {
@@ -99,7 +100,9 @@ func streamStats(containerID string) {
 		cpuDelta := float64(s.CPUStats.CPUUsage.TotalUsage - s.PreCPUStats.CPUUsage.TotalUsage)
 		systemDelta := float64(s.CPUStats.SystemCPUUsage - s.PreCPUStats.SystemCPUUsage)
 		cpuPercent := 0.0
-		if systemDelta > 0 {
+		if systemDelta > 0 && s.CPUStats.OnlineCPUs > 0 {
+			cpuPercent = (cpuDelta / systemDelta) * float64(s.CPUStats.OnlineCPUs) * 100.0
+		} else if systemDelta > 0 {
 			cpuPercent = (cpuDelta / systemDelta) * 100.0
 		}
 
