@@ -5,7 +5,7 @@ use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    widgets::{Block, Borders, Cell, List, ListItem, Paragraph, Row, Table, Tabs},
+    widgets::{Block, Borders, Cell, List, ListItem, Paragraph, Row, Sparkline, Table, Tabs},
 };
 
 use crate::{
@@ -312,15 +312,25 @@ fn draw_analytics(f: &mut Frame, area: Rect, _app: &mut App) {
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(rows[1]);
 
+    let mut cpu_data: Vec<u64> = vec![
+        20, 35, 50, 65, 80, 90, 85, 70, 55, 40, 30, 25, 35, 50, 70, 85, 95, 90, 75, 55, 35, 20, 15,
+        25, 40, 60, 75, 85, 80, 65, 45, 30, 25, 40, 55, 70, 80, 75, 60, 45, 35, 30, 45, 65, 80, 90,
+        85, 70,
+    ];
+
     let top_left_block = Block::default()
         .border_type(ratatui::widgets::BorderType::Rounded)
         .borders(Borders::ALL)
         .title("CPU Usage");
-    let top_left_content = Paragraph::new("CPU: 45%\nCores: 8\nLoad: 2.34")
+
+    let cpu_sparkline = Sparkline::default()
         .block(Block::default())
+        .data(&cpu_data)
+        .max(100)
         .style(Style::default().fg(Color::Green));
+
     f.render_widget(top_left_block.clone(), top_cols[0]);
-    f.render_widget(top_left_content, top_left_block.inner(top_cols[0]));
+    f.render_widget(cpu_sparkline, top_left_block.inner(top_cols[0]));
 
     let top_right_block = Block::default()
         .border_type(ratatui::widgets::BorderType::Rounded)
