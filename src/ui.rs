@@ -376,16 +376,31 @@ fn draw_analytics(f: &mut Frame, area: Rect, _app: &mut App) {
     f.render_widget(top_right_block.clone(), top_cols[1]);
     f.render_widget(mem_sparkline, top_right_block.inner(top_cols[1]));
 
+    //TODO: Making row block working
     let bottom_left_block = Block::default()
         .border_type(ratatui::widgets::BorderType::Rounded)
         .borders(Borders::ALL)
         .title("Network I/O");
-    let bottom_left_content =
-        Paragraph::new("↓ Download: 1.2 MB/s\n↑ Upload: 0.5 MB/s\nTotal: 45 GB")
-            .block(Block::default())
-            .style(Style::default().fg(Color::Yellow));
+
+    let network_row = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .split(bottom_left_block.inner(bottom_cols[0]));
+
+    let upload_sparkline = Sparkline::default()
+        .block(Block::default().borders(Borders::ALL).title("Upload"))
+        .data(&values_mem)
+        .max(max_vals)
+        .style(Style::default().fg(Color::Green));
+    let download_sparkline = Sparkline::default()
+        .block(Block::default().borders(Borders::ALL).title("Download"))
+        .data(&values_mem)
+        .max(max_vals)
+        .style(Style::default().fg(Color::Green));
+
     f.render_widget(bottom_left_block.clone(), bottom_cols[0]);
-    f.render_widget(bottom_left_content, bottom_left_block.inner(bottom_cols[0]));
+    f.render_widget(upload_sparkline, network_row[0]);
+    f.render_widget(download_sparkline, network_row[1]);
 
     let bottom_right_block = Block::default()
         .border_type(ratatui::widgets::BorderType::Rounded)
