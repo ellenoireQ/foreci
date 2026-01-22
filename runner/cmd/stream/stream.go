@@ -21,6 +21,8 @@ type StatsOutput struct {
 	MemLimit    uint64  `json:"mem_limit"`
 	MemPercent  float64 `json:"mem_percent"`
 	Error       string  `json:"error,omitempty"`
+	Net_Rx      uint64  `json:"net_rx"`
+	Net_Tx      uint64  `json:"net_tx"`
 }
 
 type ContainerStats struct {
@@ -42,6 +44,11 @@ type ContainerStats struct {
 		Usage uint64 `json:"usage"`
 		Limit uint64 `json:"limit"`
 	} `json:"memory_stats"`
+
+	Networks map[string]struct {
+		RxBytes uint64 `json:"rx_bytes"`
+		TxBytes uint64 `json:"tx_bytes"`
+	} `json:"networks"`
 }
 
 var StreamCmd = &cobra.Command{
@@ -110,6 +117,12 @@ func streamStats(containerID string) {
 		if s.MemoryStats.Limit > 0 {
 			memPercent = (float64(s.MemoryStats.Usage) / float64(s.MemoryStats.Limit)) * 100.0
 		}
+		var download, upload uint64
+
+		for _, net := range s.Networks {
+			download += net.RxBytes
+			upload += net.TxBytes
+		}
 
 		outputJSON(StatsOutput{
 			ContainerID: containerID,
@@ -117,6 +130,8 @@ func streamStats(containerID string) {
 			MemUsage:    s.MemoryStats.Usage,
 			MemLimit:    s.MemoryStats.Limit,
 			MemPercent:  memPercent,
+			Net_Rx:      download,
+			Net_Tx:      upload,
 		})
 	}
 }
