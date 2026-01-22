@@ -78,7 +78,7 @@ pub struct FilePath {
 pub struct CPUUsage {
     pub container_id: String,
     pub cpu_percent: f64,
-    pub mem_usage: u64,
+    pub mem_usage: f64,
     pub mem_limit: u64,
     pub mem_percent: f64,
 }
@@ -103,6 +103,7 @@ pub struct App {
     pub analytics_rx: Option<tokio::sync::mpsc::Receiver<CPUUsage>>,
     pub analytics: CPUUsage,
     pub cpu_data: Vec<u64>,
+    pub mem_data: Vec<u64>,
     last_scroll: Instant,
     pub scroll_offset: usize,
 }
@@ -131,10 +132,11 @@ impl Default for App {
             analytics: CPUUsage {
                 container_id: "".to_string(),
                 cpu_percent: 0.0,
-                mem_usage: 0,
+                mem_usage: 0.0,
                 mem_limit: 0,
                 mem_percent: 0.0,
             },
+            mem_data: vec![],
         }
     }
 }
@@ -614,6 +616,13 @@ impl App {
                 (0.1 as f64 * 100.0).round() as u64
             };
             self.cpu_data.push(value);
+
+            let value_mem = if usage.mem_usage > 0.01 {
+                (usage.mem_usage * 100.0).round() as u64
+            } else {
+                (0.1 as f64 * 100.0).round() as u64
+            };
+            self.mem_data.push(value_mem);
             self.analytics = usage;
         }
 

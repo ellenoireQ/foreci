@@ -304,6 +304,15 @@ fn sparkline_window(_app: &mut App, width: usize, _scroll: usize) -> Vec<u64> {
     let start = len.saturating_sub(width);
     _app.cpu_data[start..len].to_vec()
 }
+fn sparkline_mem_window(_app: &mut App, width: usize, _scroll: usize) -> Vec<u64> {
+    let len = _app.mem_data.len();
+    if len == 0 {
+        return vec![];
+    }
+
+    let start = len.saturating_sub(width);
+    _app.mem_data[start..len].to_vec()
+}
 
 fn draw_analytics(f: &mut Frame, area: Rect, _app: &mut App) {
     let rows = Layout::default()
@@ -350,11 +359,22 @@ fn draw_analytics(f: &mut Frame, area: Rect, _app: &mut App) {
         .border_type(ratatui::widgets::BorderType::Rounded)
         .borders(Borders::ALL)
         .title("Memory Usage");
-    let top_right_content = Paragraph::new("Used: 8.2 GB\nFree: 7.8 GB\nTotal: 16 GB")
+
+    let values_mem = sparkline_mem_window(
+        _app,
+        top_right_block.inner(top_cols[1]).width as usize,
+        _app.scroll_offset,
+    );
+    let max_vals = values_mem.iter().copied().max().unwrap_or(10).max(10);
+
+    let mem_sparkline = Sparkline::default()
         .block(Block::default())
-        .style(Style::default().fg(Color::Cyan));
+        .data(&values_mem)
+        .max(max_vals)
+        .style(Style::default().fg(Color::Green));
+
     f.render_widget(top_right_block.clone(), top_cols[1]);
-    f.render_widget(top_right_content, top_right_block.inner(top_cols[1]));
+    f.render_widget(mem_sparkline, top_right_block.inner(top_cols[1]));
 
     let bottom_left_block = Block::default()
         .border_type(ratatui::widgets::BorderType::Rounded)
