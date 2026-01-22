@@ -18,9 +18,9 @@ A continuous integration tool designed for easy integration with docker build sy
 
 ### Changes
  - [X] CPU Usage
- - [] Network
- - [] Memory Usage
- - [] Disk Usage
+ - [ ] Network
+ - [ ] Memory Usage
+ - [ ] Disk Usage
 
 </details>
 
