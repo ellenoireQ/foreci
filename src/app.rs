@@ -81,6 +81,14 @@ pub struct CPUUsage {
     pub mem_usage: f64,
     pub mem_limit: u64,
     pub mem_percent: f64,
+    pub net_rx: u64,
+    pub net_tx: u64,
+}
+
+#[derive(Default)]
+pub struct NetData {
+    pub net_rx: u64,
+    pub net_tx: u64,
 }
 
 pub struct App {
@@ -104,6 +112,7 @@ pub struct App {
     pub analytics: CPUUsage,
     pub cpu_data: Vec<u64>,
     pub mem_data: Vec<u64>,
+    pub net_data: Vec<NetData>,
     last_scroll: Instant,
     pub scroll_offset: usize,
 }
@@ -135,8 +144,11 @@ impl Default for App {
                 mem_usage: 0.0,
                 mem_limit: 0,
                 mem_percent: 0.0,
+                net_rx: 0,
+                net_tx: 0,
             },
             mem_data: vec![],
+            net_data: vec![],
         }
     }
 }
@@ -623,6 +635,13 @@ impl App {
                 (0.1 as f64 * 100.0).round() as u64
             };
             self.mem_data.push(value_mem);
+
+            // Store network data
+            self.net_data.push(NetData {
+                net_rx: usage.net_rx,
+                net_tx: usage.net_tx,
+            });
+
             self.analytics = usage;
         }
 

@@ -314,6 +314,26 @@ fn sparkline_mem_window(_app: &mut App, width: usize, _scroll: usize) -> Vec<u64
     _app.mem_data[start..len].to_vec()
 }
 
+fn sparkline_net_rx_window(_app: &mut App, width: usize) -> Vec<u64> {
+    let len = _app.net_data.len();
+    if len == 0 {
+        return vec![];
+    }
+
+    let start = len.saturating_sub(width);
+    _app.net_data[start..len].iter().map(|n| n.net_rx).collect()
+}
+
+fn sparkline_net_tx_window(_app: &mut App, width: usize) -> Vec<u64> {
+    let len = _app.net_data.len();
+    if len == 0 {
+        return vec![];
+    }
+
+    let start = len.saturating_sub(width);
+    _app.net_data[start..len].iter().map(|n| n.net_tx).collect()
+}
+
 fn draw_analytics(f: &mut Frame, area: Rect, _app: &mut App) {
     let rows = Layout::default()
         .direction(Direction::Vertical)
@@ -387,16 +407,26 @@ fn draw_analytics(f: &mut Frame, area: Rect, _app: &mut App) {
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(bottom_left_block.inner(bottom_cols[0]));
 
+    let values_tx = sparkline_net_tx_window(_app, network_row[0].width as usize);
+    let max_tx = values_tx.iter().copied().max().unwrap_or(1024).max(1024);
+
+    let values_rx = sparkline_net_rx_window(_app, network_row[1].width as usize);
+    let max_rx = values_rx.iter().copied().max().unwrap_or(1024).max(1024);
+
     let upload_sparkline = Sparkline::default()
-        .block(Block::default().borders(Borders::ALL).title("Upload"))
-        .data(&values_mem)
-        .max(max_vals)
-        .style(Style::default().fg(Color::Green));
+        .block(Block::default().borders(Borders::ALL).title("Upload (TX)"))
+        .data(&values_tx)
+        .max(max_tx)
+        .style(Style::default().fg(Color::Cyan));
     let download_sparkline = Sparkline::default()
-        .block(Block::default().borders(Borders::ALL).title("Download"))
-        .data(&values_mem)
-        .max(max_vals)
-        .style(Style::default().fg(Color::Green));
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Download (RX)"),
+        )
+        .data(&values_rx)
+        .max(max_rx)
+        .style(Style::default().fg(Color::Yellow));
 
     f.render_widget(bottom_left_block.clone(), bottom_cols[0]);
     f.render_widget(upload_sparkline, network_row[0]);
