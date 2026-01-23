@@ -119,6 +119,12 @@ pub struct NetData {
     pub net_tx: u64,
 }
 
+#[derive(Deserialize)]
+pub struct StartContainer {
+    pub container_id: String,
+    pub status: String,
+}
+
 const MAX_POINT: usize = 120;
 
 pub struct App {
@@ -592,8 +598,41 @@ impl App {
                         });
                     }
                     Some(MenuAction::Start) => {
-                        self.log
-                            .print_mes(LogType::Info, &format!("Starting: {}", container.name));
+                        if let Ok(output) = Command::new("./bin/runner")
+                            .args(["list"])
+                            .stdout(Stdio::piped())
+                            .stderr(Stdio::piped())
+                            .output()
+                            .await
+                        {
+                            let stdout = String::from_utf8_lossy(&output.stdout);
+                            for line in stdout.lines() {
+                                if let Ok(parsed) = serde_json::from_str::<RunningContainer>(line) {
+                                    let (tx, rx) = tokio::sync::mpsc::channel::<String>(100);
+                                    self.log_rx = Some(rx);
+                                    self.loading = true;
+                                    tokio::spawn(async move {
+                                        if let Ok(mut child) = Command::new("./bin/runner")
+                                            .args(["start", parsed.id.as_str()])
+                                            .stdout(Stdio::piped())
+                                            .stderr(Stdio::piped())
+                                            .spawn()
+                                        {
+                                            if let Some(stdout) = child.stdout.take() {
+                                                let mut reader = BufReader::new(stdout).lines();
+
+                                                while let Ok(Some(line)) = reader.next_line().await
+                                                {
+                                                    let _ = tx.send(line).await;
+                                                }
+                                            }
+                                            let _ = child.wait().await;
+                                        }
+                                        let _ = tx.send("__DONE__".to_string()).await;
+                                    });
+                                }
+                            }
+                        }
                     }
                     Some(MenuAction::Stop) => {
                         self.log
