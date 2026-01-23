@@ -538,7 +538,17 @@ fn draw_analytics(f: &mut Frame, area: Rect, _app: &mut App) {
         .border_type(ratatui::widgets::BorderType::Rounded)
         .borders(Borders::ALL)
         .title("Disk Usage");
-    let bottom_right_content = Paragraph::new("Used: 234 GB\nFree: 266 GB\nTotal: 500 GB")
+
+    let disk_content = format!(
+        "Images: {}\nContainers: {}\nVolumes: {}\nBuild Cache: {}\nTotal: {}",
+        format_bytes(_app.analytics.disk_images),
+        format_bytes(_app.analytics.disk_containers),
+        format_bytes(_app.analytics.disk_volumes),
+        format_bytes(_app.analytics.disk_build_cache),
+        format_bytes(_app.analytics.disk_total)
+    );
+
+    let bottom_right_content = Paragraph::new(disk_content)
         .block(Block::default())
         .style(Style::default().fg(Color::Magenta));
     f.render_widget(bottom_right_block.clone(), bottom_cols[1]);

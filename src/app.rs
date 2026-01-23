@@ -105,6 +105,11 @@ pub struct CPUUsage {
     pub mem_percent: f64,
     pub net_rx: u64,
     pub net_tx: u64,
+    pub disk_images: u64,
+    pub disk_containers: u64,
+    pub disk_volumes: u64,
+    pub disk_build_cache: u64,
+    pub disk_total: u64,
 }
 
 #[derive(Default, Clone, Copy)]
@@ -143,7 +148,6 @@ pub struct App {
     last_net_tx: u64,
     last_heartbeat: Instant,
 
-    // Running containers for analytics selection
     pub running_containers: Vec<RunningContainer>,
     pub running_container_state: ListState,
     pub running_container_idx: Option<usize>,
@@ -179,6 +183,11 @@ impl Default for App {
                 mem_percent: 0.0,
                 net_rx: 0,
                 net_tx: 0,
+                disk_images: 0,
+                disk_containers: 0,
+                disk_volumes: 0,
+                disk_build_cache: 0,
+                disk_total: 0,
             },
             mem_data: VecDeque::with_capacity(MAX_POINT),
             net_data: VecDeque::with_capacity(MAX_POINT),

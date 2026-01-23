@@ -15,14 +15,19 @@ import (
 )
 
 type StatsOutput struct {
-	ContainerID string  `json:"container_id"`
-	CPUPercent  float64 `json:"cpu_percent"`
-	MemUsage    uint64  `json:"mem_usage"`
-	MemLimit    uint64  `json:"mem_limit"`
-	MemPercent  float64 `json:"mem_percent"`
-	Error       string  `json:"error,omitempty"`
-	Net_Rx      uint64  `json:"net_rx"`
-	Net_Tx      uint64  `json:"net_tx"`
+	ContainerID    string  `json:"container_id"`
+	CPUPercent     float64 `json:"cpu_percent"`
+	MemUsage       uint64  `json:"mem_usage"`
+	MemLimit       uint64  `json:"mem_limit"`
+	MemPercent     float64 `json:"mem_percent"`
+	Error          string  `json:"error,omitempty"`
+	Net_Rx         uint64  `json:"net_rx"`
+	Net_Tx         uint64  `json:"net_tx"`
+	DiskImages     uint64  `json:"disk_images"`
+	DiskContainers uint64  `json:"disk_containers"`
+	DiskVolumes    uint64  `json:"disk_volumes"`
+	DiskBuildCache uint64  `json:"disk_build_cache"`
+	DiskTotal      uint64  `json:"disk_total"`
 }
 
 type ContainerStats struct {
@@ -67,6 +72,43 @@ func outputJSON(result StatsOutput) {
 	encoder.Encode(result)
 }
 
+func getDiskUsage(cli *client.Client, ctx context.Context) (uint64, uint64, uint64, uint64) {
+	usage, err := cli.DiskUsage(ctx, client.DiskUsageOptions{})
+	if err != nil {
+		return 0, 0, 0, 0
+	}
+
+	var imagesSize uint64
+	for _, img := range usage.Images.Items {
+		if img.Size > 0 {
+			imagesSize += uint64(img.Size)
+		}
+	}
+
+	var containersSize uint64
+	for _, container := range usage.Containers.Items {
+		if container.SizeRw > 0 {
+			containersSize += uint64(container.SizeRw)
+		}
+	}
+
+	var volumesSize uint64
+	for _, volume := range usage.Volumes.Items {
+		if volume.UsageData.Size > 0 {
+			volumesSize += uint64(volume.UsageData.Size)
+		}
+	}
+
+	var buildCacheSize uint64
+	for _, cache := range usage.BuildCache.Items {
+		if cache.Size > 0 {
+			buildCacheSize += uint64(cache.Size)
+		}
+	}
+
+	return imagesSize, containersSize, volumesSize, buildCacheSize
+}
+
 func streamStats(containerID string) {
 	ctx := context.Background()
 
@@ -89,6 +131,10 @@ func streamStats(containerID string) {
 		return
 	}
 	defer stats.Body.Close()
+
+	diskImages, diskContainers, diskVolumes, diskBuildCache := getDiskUsage(cli, ctx)
+	diskTotal := diskImages + diskContainers + diskVolumes + diskBuildCache
+	tickCount := 0
 
 	decoder := json.NewDecoder(stats.Body)
 	for {
@@ -124,14 +170,26 @@ func streamStats(containerID string) {
 			upload += net.TxBytes
 		}
 
+		tickCount++
+		if tickCount >= 10 {
+			diskImages, diskContainers, diskVolumes, diskBuildCache = getDiskUsage(cli, ctx)
+			diskTotal = diskImages + diskContainers + diskVolumes + diskBuildCache
+			tickCount = 0
+		}
+
 		outputJSON(StatsOutput{
-			ContainerID: containerID,
-			CPUPercent:  cpuPercent,
-			MemUsage:    s.MemoryStats.Usage,
-			MemLimit:    s.MemoryStats.Limit,
-			MemPercent:  memPercent,
-			Net_Rx:      download,
-			Net_Tx:      upload,
+			ContainerID:    containerID,
+			CPUPercent:     cpuPercent,
+			MemUsage:       s.MemoryStats.Usage,
+			MemLimit:       s.MemoryStats.Limit,
+			MemPercent:     memPercent,
+			Net_Rx:         download,
+			Net_Tx:         upload,
+			DiskImages:     diskImages,
+			DiskContainers: diskContainers,
+			DiskVolumes:    diskVolumes,
+			DiskBuildCache: diskBuildCache,
+			DiskTotal:      diskTotal,
 		})
 	}
 }
