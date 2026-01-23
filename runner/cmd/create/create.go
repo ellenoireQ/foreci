@@ -4,11 +4,14 @@
 package create
 
 import (
+	"archive/tar"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/netip"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/moby/moby/api/types/container"
@@ -34,6 +37,7 @@ var (
 	networks      string
 	restart       string
 	autoStart     bool
+	buildContext  string
 )
 
 var CreateCmd = &cobra.Command{
@@ -55,6 +59,7 @@ func init() {
 	CreateCmd.Flags().StringVarP(&networks, "networks", "N", "", "Networks (comma-separated)")
 	CreateCmd.Flags().StringVarP(&restart, "restart", "r", "", "Restart policy (no, always, unless-stopped, on-failure)")
 	CreateCmd.Flags().BoolVarP(&autoStart, "start", "s", false, "Auto-start container after creation")
+	CreateCmd.Flags().StringVarP(&buildContext, "build-context", "b", "", "Build context path (for building image from Dockerfile)")
 	CreateCmd.MarkFlagRequired("image")
 }
 
@@ -165,6 +170,125 @@ func imageExists(cli *client.Client, imageName string) bool {
 	return false
 }
 
+func buildImage(cli *client.Client, imageName string, contextPath string) error {
+	outputPullProgress(PullProgress{
+		Image:  imageName,
+		Status: "building",
+	})
+
+	tarReader, err := createTarFromDir(contextPath)
+	if err != nil {
+		outputPullProgress(PullProgress{
+			Image:  imageName,
+			Status: "error",
+			Error:  fmt.Sprintf("failed to create build context: %v", err),
+		})
+		return err
+	}
+
+	buildOptions := client.ImageBuildOptions{
+		Tags:       []string{imageName},
+		Dockerfile: "Dockerfile",
+		Remove:     true,
+	}
+
+	resp, err := cli.ImageBuild(context.Background(), tarReader, buildOptions)
+	if err != nil {
+		outputPullProgress(PullProgress{
+			Image:  imageName,
+			Status: "error",
+			Error:  fmt.Sprintf("failed to build image: %v", err),
+		})
+		return err
+	}
+	defer resp.Body.Close()
+
+	decoder := json.NewDecoder(resp.Body)
+	for {
+		var progress map[string]interface{}
+		if err := decoder.Decode(&progress); err != nil {
+			if err == io.EOF {
+				break
+			}
+			break
+		}
+		if stream, ok := progress["stream"].(string); ok {
+			outputPullProgress(PullProgress{
+				Image:    imageName,
+				Status:   "building",
+				Progress: strings.TrimSpace(stream),
+			})
+		}
+		if errMsg, ok := progress["error"].(string); ok {
+			outputPullProgress(PullProgress{
+				Image:  imageName,
+				Status: "error",
+				Error:  errMsg,
+			})
+			return fmt.Errorf("build error: %s", errMsg)
+		}
+	}
+
+	outputPullProgress(PullProgress{
+		Image:  imageName,
+		Status: "completed",
+	})
+
+	return nil
+}
+
+func createTarFromDir(srcDir string) (io.Reader, error) {
+	pr, pw := io.Pipe()
+
+	go func() {
+		tw := tar.NewWriter(pw)
+		defer tw.Close()
+		defer pw.Close()
+
+		err := filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+
+			relPath, err := filepath.Rel(srcDir, path)
+			if err != nil {
+				return err
+			}
+
+			if info.IsDir() && strings.HasPrefix(info.Name(), ".") && info.Name() != "." {
+				return filepath.SkipDir
+			}
+
+			header, err := tar.FileInfoHeader(info, "")
+			if err != nil {
+				return err
+			}
+			header.Name = relPath
+
+			if err := tw.WriteHeader(header); err != nil {
+				return err
+			}
+
+			if !info.IsDir() {
+				file, err := os.Open(path)
+				if err != nil {
+					return err
+				}
+				defer file.Close()
+				_, err = io.Copy(tw, file)
+				return err
+			}
+			return nil
+		})
+
+		if err != nil {
+			pw.CloseWithError(err)
+		}
+	}()
+
+	return pr, nil
+}
+
 func pullImage(cli *client.Client, imageName string) error {
 	// Skip if image already exists
 	if imageExists(cli, imageName) {
@@ -267,8 +391,19 @@ func createContainer() {
 		Name:             containerName,
 	}
 
-	// Pulling before creating container
-	pullImage(cli, imageName)
+	// Build or pull image before creating container
+	if buildContext != "" {
+		if err := buildImage(cli, imageName, buildContext); err != nil {
+			outputJSON(CreateResult{
+				ContainerName: containerName,
+				Status:        "error",
+				Error:         fmt.Sprintf("failed to build image: %v", err),
+			})
+			return
+		}
+	} else {
+		pullImage(cli, imageName)
+	}
 
 	resp, err := cli.ContainerCreate(ctx, opts)
 	if err != nil {

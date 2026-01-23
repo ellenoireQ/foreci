@@ -561,6 +561,11 @@ impl App {
                             args.push(container.restart.clone());
                         }
 
+                        if !container.build_context.is_empty() {
+                            args.push("--build-context".to_string());
+                            args.push(container.build_context.clone());
+                        }
+
                         let (tx, rx) = tokio::sync::mpsc::channel::<String>(100);
                         self.log_rx = Some(rx);
                         self.loading = true;
@@ -651,6 +656,17 @@ impl App {
                                 LogType::Info,
                                 &format!("Image exists: {}", status.image),
                             );
+                        }
+                        "building" => {
+                            if let Some(progress) = &status.progress {
+                                self.log
+                                    .print_mes(LogType::Info, &format!("Building: {}", progress));
+                            } else {
+                                self.log.print_mes(
+                                    LogType::Info,
+                                    &format!("Building image: {}", status.image),
+                                );
+                            }
                         }
                         "error" => {
                             self.log.print_mes(
