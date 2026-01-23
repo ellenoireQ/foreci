@@ -327,7 +327,7 @@ fn sparkline_mem_window(_app: &mut App, width: usize, _scroll: usize) -> Vec<u64
     }
 
     let start = len.saturating_sub(width);
-    _app.mem_data[start..len].to_vec()
+    _app.mem_data_as_slice()[start..len].to_vec()
 }
 
 fn sparkline_net_rx_window(_app: &mut App, width: usize) -> Vec<u64> {

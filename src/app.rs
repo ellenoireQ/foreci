@@ -112,7 +112,7 @@ pub struct App {
     pub analytics_rx: Option<tokio::sync::mpsc::Receiver<CPUUsage>>,
     pub analytics: CPUUsage,
     pub cpu_data: VecDeque<u64>,
-    pub mem_data: Vec<u64>,
+    pub mem_data: VecDeque<u64>,
     pub net_data: Vec<NetData>,
     last_scroll: Instant,
     pub scroll_offset: usize,
@@ -151,7 +151,7 @@ impl Default for App {
                 net_rx: 0,
                 net_tx: 0,
             },
-            mem_data: vec![],
+            mem_data: VecDeque::with_capacity(60),
             net_data: vec![],
             last_net_rx: 0,
             last_net_tx: 0,
@@ -587,6 +587,15 @@ impl App {
             self.last_scroll = now;
         }
     }
+    pub fn mem_push_data(&mut self, value: u64) {
+        if self.mem_data.len() == 120 {
+            self.mem_data.pop_front();
+        }
+        self.mem_data.push_back(value);
+    }
+    pub fn mem_data_as_slice(&self) -> Vec<u64> {
+        self.mem_data.iter().copied().collect()
+    }
 
     pub fn start_analytics_stream(&mut self, container_id: &str) {
         if self.analytics_rx.is_some() {
@@ -602,7 +611,7 @@ impl App {
         // Add initial seed data so graph doesn't start empty
         for _ in 0..20 {
             self.cpu_push_data(5);
-            self.mem_data.push(10);
+            self.mem_push_data(10);
             self.net_data.push(NetData {
                 net_rx: 5,
                 net_tx: 5,
@@ -653,7 +662,7 @@ impl App {
                 let cpu_value = (usage.cpu_percent * 100.0).round() as u64;
                 self.cpu_push_data(cpu_value.max(1));
                 let mem_value = (usage.mem_percent * 100.0).round() as u64;
-                self.mem_data.push(mem_value.max(1));
+                self.mem_push_data(mem_value.max(1));
 
                 let is_first_reading = self.last_net_rx == 0 && self.last_net_tx == 0;
 
@@ -688,7 +697,7 @@ impl App {
             let now = Instant::now();
             if now.duration_since(self.last_heartbeat) >= Duration::from_millis(500) {
                 let last_cpu = *self.cpu_data_as_slice().last().unwrap_or(&1);
-                let last_mem = *self.mem_data.last().unwrap_or(&1);
+                let last_mem = *self.mem_data_as_slice().last().unwrap_or(&1);
 
                 let variation = (last_cpu as i64 * (rand::random::<i64>() % 21 - 10)) / 100;
                 let new_cpu = (last_cpu as i64 + variation).max(1) as u64;
@@ -709,7 +718,7 @@ impl App {
                 let new_tx = (tx_base as i64 + tx_var).max(5) as u64;
 
                 self.cpu_push_data(new_cpu);
-                self.mem_data.push(new_mem);
+                self.mem_push_data(new_mem);
                 self.net_data.push(NetData {
                     net_rx: new_rx,
                     net_tx: new_tx,
