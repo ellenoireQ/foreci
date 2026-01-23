@@ -86,7 +86,7 @@ func ReadCompose(path string) {
 	)
 
 	for _, svc := range project.Services {
-		var envVars []string
+		envVars := []string{}
 		for key, val := range svc.Environment {
 			if val != nil {
 				envVars = append(envVars, key+"="+*val)
@@ -95,12 +95,12 @@ func ReadCompose(path string) {
 			}
 		}
 
-		var volumes []string
+		volumes := []string{}
 		for _, vol := range svc.Volumes {
 			volumes = append(volumes, vol.String())
 		}
 
-		var networks []string
+		networks := []string{}
 		for netName := range svc.Networks {
 			networks = append(networks, netName)
 		}
