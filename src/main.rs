@@ -45,9 +45,10 @@ async fn main() -> io::Result<()> {
         app.poll_logs();
         app.poll_analytics(); // Always poll analytics to keep graph moving
 
-        if !app.loading {
-            app.log.print_mes(LogType::Info, "Statrting to read");
-            app.start_analytics_stream("bb82771bbb5d");
+        if app.current_tab == app::Tab::Deployments {
+            if let Some(ref container_id) = app.selected_container_id.clone() {
+                app.start_analytics_stream(&container_id);
+            }
         }
 
         terminal.draw(|f| draw_ui(f, &mut app))?;
@@ -60,6 +61,7 @@ async fn main() -> io::Result<()> {
                         KeyCode::Char('r') | KeyCode::Char('R') => match app.current_tab {
                             app::Tab::Containers => app.fetch_containers().await,
                             app::Tab::Images => app.fetch_images().await,
+                            app::Tab::Deployments => app.fetch_running_containers().await,
                             _ => {}
                         },
                         KeyCode::Tab => {
@@ -67,11 +69,21 @@ async fn main() -> io::Result<()> {
                             if app.current_tab == app::Tab::Images && app.images.is_empty() {
                                 app.fetch_images().await;
                             }
+                            if app.current_tab == app::Tab::Deployments
+                                && app.running_containers.is_empty()
+                            {
+                                app.fetch_running_containers().await;
+                            }
                         }
                         KeyCode::BackTab => {
                             app.prev_tab();
                             if app.current_tab == app::Tab::Images && app.images.is_empty() {
                                 app.fetch_images().await;
+                            }
+                            if app.current_tab == app::Tab::Deployments
+                                && app.running_containers.is_empty()
+                            {
+                                app.fetch_running_containers().await;
                             }
                         }
                         KeyCode::Char('d') => app.delete().await,
@@ -84,6 +96,7 @@ async fn main() -> io::Result<()> {
                                 }
                             }
                             app::Tab::Images => app.select_prev_image(),
+                            app::Tab::Deployments => app.select_prev_running_container(),
                             _ => {}
                         },
                         KeyCode::Down | KeyCode::Char('j') => match app.current_tab {
@@ -95,15 +108,22 @@ async fn main() -> io::Result<()> {
                                 }
                             }
                             app::Tab::Images => app.select_next_image(),
+                            app::Tab::Deployments => app.select_next_running_container(),
                             _ => {}
                         },
-                        KeyCode::Enter => {
-                            if app.expanded_index.is_some() {
-                                app.execute_menu_action().await;
-                            } else {
-                                app.toggle_expand();
+                        KeyCode::Enter => match app.current_tab {
+                            app::Tab::Containers => {
+                                if app.expanded_index.is_some() {
+                                    app.execute_menu_action().await;
+                                } else {
+                                    app.toggle_expand();
+                                }
                             }
-                        }
+                            app::Tab::Deployments => {
+                                app.select_running_container();
+                            }
+                            _ => {}
+                        },
                         KeyCode::Esc => {
                             app.expanded_index = None;
                             app.menu_selection = 0;

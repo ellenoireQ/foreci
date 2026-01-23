@@ -357,10 +357,69 @@ fn sparkline_net_tx_window(_app: &mut App, width: usize) -> Vec<u64> {
 }
 
 fn draw_analytics(f: &mut Frame, area: Rect, _app: &mut App) {
+    let main_layout = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Length(30), Constraint::Fill(1)])
+        .split(area);
+    // Left panel
+    let container_block = Block::default()
+        .border_type(ratatui::widgets::BorderType::Rounded)
+        .borders(Borders::ALL)
+        .title("Select Container");
+
+    let mut container_items: Vec<ListItem> = Vec::new();
+
+    if _app.loading {
+        container_items.push(ListItem::new("⏳ Loading..."));
+    } else if _app.running_containers.is_empty() {
+        container_items.push(ListItem::new("No running containers"));
+        container_items.push(ListItem::new("Press 'r' to refresh"));
+    } else {
+        for container in &_app.running_containers {
+            let name = container
+                .names
+                .first()
+                .map(|n| n.trim_start_matches('/').to_string())
+                .unwrap_or_else(|| container.id.clone());
+
+            let is_selected = _app.selected_container_id.as_ref() == Some(&container.id);
+            let prefix = if is_selected { "● " } else { "  " };
+            let display = format!("{}{}", prefix, name);
+
+            let style = if is_selected {
+                Style::default()
+                    .fg(Color::Green)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(Color::Cyan)
+            };
+
+            container_items.push(ListItem::new(display).style(style));
+        }
+    }
+
+    let container_list = List::new(container_items)
+        .highlight_style(
+            Style::default()
+                .bg(Color::DarkGray)
+                .add_modifier(Modifier::BOLD),
+        )
+        .block(container_block)
+        .highlight_symbol("→ ");
+
+    f.render_stateful_widget(
+        container_list,
+        main_layout[0],
+        &mut _app.running_container_state,
+    );
+
+    // Right panel
+    let charts_area = main_layout[1];
+
     let rows = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-        .split(area);
+        .split(charts_area);
 
     let top_cols = Layout::default()
         .direction(Direction::Horizontal)

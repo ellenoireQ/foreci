@@ -75,6 +75,27 @@ pub struct FilePath {
     filepath: String,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct RunningContainer {
+    pub id: String,
+    pub image: String,
+    pub command: String,
+    pub created: i64,
+    pub status: String,
+    pub state: String,
+    pub ports: Option<Vec<ContainerPort>>,
+    pub names: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ContainerPort {
+    pub ip: String,
+    pub private_port: u16,
+    pub public_port: u16,
+    #[serde(rename = "type")]
+    pub port_type: String,
+}
+
 #[derive(Deserialize)]
 pub struct CPUUsage {
     pub container_id: String,
@@ -121,6 +142,12 @@ pub struct App {
     last_net_rx: u64,
     last_net_tx: u64,
     last_heartbeat: Instant,
+
+    // Running containers for analytics selection
+    pub running_containers: Vec<RunningContainer>,
+    pub running_container_state: ListState,
+    pub running_container_idx: Option<usize>,
+    pub selected_container_id: Option<String>,
 }
 
 impl Default for App {
@@ -158,6 +185,10 @@ impl Default for App {
             last_net_rx: 0,
             last_net_tx: 0,
             last_heartbeat: Instant::now(),
+            running_containers: Vec::new(),
+            running_container_state: ListState::default(),
+            running_container_idx: None,
+            selected_container_id: None,
         }
     }
 }
@@ -242,6 +273,94 @@ impl App {
         }
 
         self.loading = false;
+    }
+
+    pub async fn fetch_running_containers(&mut self) {
+        self.loading = true;
+        self.running_containers.clear();
+
+        if let Ok(output) = Command::new("./bin/runner")
+            .args(["list"])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output()
+            .await
+        {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            for line in stdout.lines() {
+                if let Ok(parsed) = serde_json::from_str::<RunningContainer>(line) {
+                    // Only include running containers
+                    if parsed.state == "running" {
+                        self.running_containers.push(parsed);
+                    }
+                }
+            }
+        }
+
+        if self.running_containers.is_empty() {
+            self.log
+                .print_mes(LogType::Info, "No running containers found");
+        } else {
+            self.log.print_mes(
+                LogType::Info,
+                &format!("Found {} running containers", self.running_containers.len()),
+            );
+            self.running_container_state.select(Some(0));
+            self.running_container_idx = Some(0);
+        }
+
+        self.loading = false;
+    }
+
+    pub fn select_next_running_container(&mut self) {
+        if self.running_containers.is_empty() {
+            return;
+        }
+        let i = match self.running_container_state.selected() {
+            Some(i) => {
+                if i >= self.running_containers.len() - 1 {
+                    0
+                } else {
+                    i + 1
+                }
+            }
+            None => 0,
+        };
+        self.running_container_state.select(Some(i));
+        self.running_container_idx = Some(i);
+    }
+
+    pub fn select_prev_running_container(&mut self) {
+        if self.running_containers.is_empty() {
+            return;
+        }
+        let i = match self.running_container_state.selected() {
+            Some(i) => {
+                if i == 0 {
+                    self.running_containers.len() - 1
+                } else {
+                    i - 1
+                }
+            }
+            None => self.running_containers.len() - 1,
+        };
+        self.running_container_state.select(Some(i));
+        self.running_container_idx = Some(i);
+    }
+
+    pub fn select_running_container(&mut self) {
+        if let Some(idx) = self.running_container_idx {
+            if let Some(container) = self.running_containers.get(idx) {
+                let container_id = container.id.clone();
+                self.log.print_mes(
+                    LogType::Info,
+                    &format!("Selected container: {}", container_id),
+                );
+                // Stop current analytics stream if any
+                self.analytics_rx = None;
+                self.selected_container_id = Some(container_id);
+            }
+        }
     }
 
     pub fn next_tab(&mut self) {
