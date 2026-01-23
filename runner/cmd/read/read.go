@@ -5,6 +5,7 @@ package read
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -126,10 +127,15 @@ func ReadCompose(path string) {
 			}
 		}
 
+		image := svc.Image
+		if image == "" && svc.Build != nil {
+			image = fmt.Sprintf("%s-%s", project.Name, svc.Name)
+		}
+
 		outputJSON(DockerCompose{
 			Name:          project.Name,
 			Service:       svc.Name,
-			Image:         svc.Image,
+			Image:         image,
 			Ports:         portsStr,
 			ContainerName: svc.ContainerName,
 			Hostname:      svc.Hostname,
