@@ -13,6 +13,22 @@ use crate::{
     log::log::LogType,
 };
 
+fn format_bytes(bytes: u64) -> String {
+    const KB: u64 = 1024;
+    const MB: u64 = KB * 1024;
+    const GB: u64 = MB * 1024;
+
+    if bytes >= GB {
+        format!("{:.1}GB", bytes as f64 / GB as f64)
+    } else if bytes >= MB {
+        format!("{:.1}MB", bytes as f64 / MB as f64)
+    } else if bytes >= KB {
+        format!("{:.1}KB", bytes as f64 / KB as f64)
+    } else {
+        format!("{}B", bytes)
+    }
+}
+
 pub fn draw_ui(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -350,13 +366,14 @@ fn draw_analytics(f: &mut Frame, area: Rect, _app: &mut App) {
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(rows[1]);
 
+    // CPU Usage with percentage
+    let cpu_percent = _app.analytics.cpu_percent;
+    let cpu_title = format!("CPU Usage - {:.2}%", cpu_percent);
     let top_left_block = Block::default()
         .border_type(ratatui::widgets::BorderType::Rounded)
         .borders(Borders::ALL)
-        .title("CPU Usage");
+        .title(cpu_title);
 
-    //    let mut speed_scroll: u64 = 0;
-    //    speed_scroll += 20;
     _app.update_cpu_scroll();
     let values = sparkline_window(
         _app,
@@ -375,10 +392,13 @@ fn draw_analytics(f: &mut Frame, area: Rect, _app: &mut App) {
     f.render_widget(top_left_block.clone(), top_cols[0]);
     f.render_widget(cpu_sparkline, top_left_block.inner(top_cols[0]));
 
+    // Memory Usage with percentage
+    let mem_percent = _app.analytics.mem_percent;
+    let mem_title = format!("Memory Usage - {:.2}%", mem_percent);
     let top_right_block = Block::default()
         .border_type(ratatui::widgets::BorderType::Rounded)
         .borders(Borders::ALL)
-        .title("Memory Usage");
+        .title(mem_title);
 
     let values_mem = sparkline_mem_window(
         _app,
@@ -396,11 +416,18 @@ fn draw_analytics(f: &mut Frame, area: Rect, _app: &mut App) {
     f.render_widget(top_right_block.clone(), top_cols[1]);
     f.render_widget(mem_sparkline, top_right_block.inner(top_cols[1]));
 
-    //TODO: Making row block working
+    // Network I/O with current values
+    let net_rx = _app.analytics.net_rx;
+    let net_tx = _app.analytics.net_tx;
+    let net_title = format!(
+        "Network I/O - ↑{} ↓{}",
+        format_bytes(net_tx),
+        format_bytes(net_rx)
+    );
     let bottom_left_block = Block::default()
         .border_type(ratatui::widgets::BorderType::Rounded)
         .borders(Borders::ALL)
-        .title("Network I/O");
+        .title(net_title);
 
     let network_row = Layout::default()
         .direction(Direction::Horizontal)
@@ -413,17 +440,19 @@ fn draw_analytics(f: &mut Frame, area: Rect, _app: &mut App) {
     let values_rx = sparkline_net_rx_window(_app, network_row[1].width as usize);
     let max_rx = values_rx.iter().copied().max().unwrap_or(1024).max(1024);
 
+    // Get current rate for display
+    let current_tx = _app.net_data.last().map(|n| n.net_tx).unwrap_or(0);
+    let current_rx = _app.net_data.last().map(|n| n.net_rx).unwrap_or(0);
+    let tx_title = format!("Upload - {}/s", format_bytes(current_tx * 100)); // *100 to reverse scaling
+    let rx_title = format!("Download - {}/s", format_bytes(current_rx * 100));
+
     let upload_sparkline = Sparkline::default()
-        .block(Block::default().borders(Borders::ALL).title("Upload (TX)"))
+        .block(Block::default().borders(Borders::ALL).title(tx_title))
         .data(&values_tx)
         .max(max_tx)
         .style(Style::default().fg(Color::Cyan));
     let download_sparkline = Sparkline::default()
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title("Download (RX)"),
-        )
+        .block(Block::default().borders(Borders::ALL).title(rx_title))
         .data(&values_rx)
         .max(max_rx)
         .style(Style::default().fg(Color::Yellow));
