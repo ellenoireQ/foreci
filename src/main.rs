@@ -43,11 +43,11 @@ async fn main() -> io::Result<()> {
 
     loop {
         app.poll_logs();
+        app.poll_analytics(); // Always poll analytics to keep graph moving
+
         if !app.loading {
             app.log.print_mes(LogType::Info, "Statrting to read");
-
             app.start_analytics_stream("bb82771bbb5d");
-            app.poll_analytics();
         }
 
         terminal.draw(|f| draw_ui(f, &mut app))?;
