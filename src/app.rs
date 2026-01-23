@@ -22,6 +22,7 @@ pub enum Tab {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum MenuAction {
+    BuildAndStart,
     Start,
     Stop,
     Delete,
@@ -499,8 +500,9 @@ impl App {
     pub fn get_menu_action(&self) -> Option<MenuAction> {
         if self.expanded_index.is_some() {
             Some(match self.menu_selection {
-                0 => MenuAction::Start,
-                1 => MenuAction::Stop,
+                0 => MenuAction::BuildAndStart,
+                1 => MenuAction::Start,
+                2 => MenuAction::Stop,
                 _ => MenuAction::Delete,
             })
         } else {
@@ -515,7 +517,7 @@ impl App {
                 let container = self.containers[idx].clone();
 
                 match action {
-                    Some(MenuAction::Start) => {
+                    Some(MenuAction::BuildAndStart) => {
                         self.log.print_mes(
                             LogType::Info,
                             &format!("Creating container: {}", container.name),
@@ -588,6 +590,10 @@ impl App {
                             }
                             let _ = tx.send("__DONE__".to_string()).await;
                         });
+                    }
+                    Some(MenuAction::Start) => {
+                        self.log
+                            .print_mes(LogType::Info, &format!("Starting: {}", container.name));
                     }
                     Some(MenuAction::Stop) => {
                         self.log
