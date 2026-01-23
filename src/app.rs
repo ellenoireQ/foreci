@@ -86,7 +86,7 @@ pub struct CPUUsage {
     pub net_tx: u64,
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Copy)]
 pub struct NetData {
     pub net_rx: u64,
     pub net_tx: u64,
@@ -115,7 +115,7 @@ pub struct App {
     pub analytics: CPUUsage,
     pub cpu_data: VecDeque<u64>,
     pub mem_data: VecDeque<u64>,
-    pub net_data: Vec<NetData>,
+    pub net_data: VecDeque<NetData>,
     last_scroll: Instant,
     pub scroll_offset: usize,
     last_net_rx: u64,
@@ -153,8 +153,8 @@ impl Default for App {
                 net_rx: 0,
                 net_tx: 0,
             },
-            mem_data: VecDeque::with_capacity(60),
-            net_data: vec![],
+            mem_data: VecDeque::with_capacity(MAX_POINT),
+            net_data: VecDeque::with_capacity(MAX_POINT),
             last_net_rx: 0,
             last_net_tx: 0,
             last_heartbeat: Instant::now(),
@@ -598,6 +598,15 @@ impl App {
     pub fn mem_data_as_slice(&self) -> Vec<u64> {
         self.mem_data.iter().copied().collect()
     }
+    pub fn net_push_data(&mut self, value: NetData) {
+        if self.net_data.len() == MAX_POINT {
+            self.net_data.pop_front();
+        }
+        self.net_data.push_back(value);
+    }
+    pub fn net_data_as_slice(&self) -> Vec<NetData> {
+        self.net_data.iter().copied().collect()
+    }
 
     pub fn start_analytics_stream(&mut self, container_id: &str) {
         if self.analytics_rx.is_some() {
@@ -614,7 +623,7 @@ impl App {
         for _ in 0..20 {
             self.cpu_push_data(5);
             self.mem_push_data(10);
-            self.net_data.push(NetData {
+            self.net_push_data(NetData {
                 net_rx: 5,
                 net_tx: 5,
             });
@@ -683,7 +692,7 @@ impl App {
                     let rx_scaled = ((rx_delta / 100) as u64).max(5);
                     let tx_scaled = ((tx_delta / 100) as u64).max(5);
 
-                    self.net_data.push(NetData {
+                    self.net_push_data(NetData {
                         net_rx: rx_scaled,
                         net_tx: tx_scaled,
                     });
@@ -707,7 +716,7 @@ impl App {
                 let mem_variation = (last_mem as i64 * (rand::random::<i64>() % 11 - 5)) / 100;
                 let new_mem = (last_mem as i64 + mem_variation).max(1) as u64;
 
-                let last_net = self.net_data.last().cloned().unwrap_or(NetData {
+                let last_net = self.net_data_as_slice().last().cloned().unwrap_or(NetData {
                     net_rx: 5,
                     net_tx: 5,
                 });
@@ -721,7 +730,7 @@ impl App {
 
                 self.cpu_push_data(new_cpu);
                 self.mem_push_data(new_mem);
-                self.net_data.push(NetData {
+                self.net_push_data(NetData {
                     net_rx: new_rx,
                     net_tx: new_tx,
                 });

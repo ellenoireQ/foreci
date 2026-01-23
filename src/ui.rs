@@ -337,7 +337,10 @@ fn sparkline_net_rx_window(_app: &mut App, width: usize) -> Vec<u64> {
     }
 
     let start = len.saturating_sub(width);
-    _app.net_data[start..len].iter().map(|n| n.net_rx).collect()
+    _app.net_data_as_slice()[start..len]
+        .iter()
+        .map(|n| n.net_rx)
+        .collect()
 }
 
 fn sparkline_net_tx_window(_app: &mut App, width: usize) -> Vec<u64> {
@@ -347,7 +350,10 @@ fn sparkline_net_tx_window(_app: &mut App, width: usize) -> Vec<u64> {
     }
 
     let start = len.saturating_sub(width);
-    _app.net_data[start..len].iter().map(|n| n.net_tx).collect()
+    _app.net_data_as_slice()[start..len]
+        .iter()
+        .map(|n| n.net_tx)
+        .collect()
 }
 
 fn draw_analytics(f: &mut Frame, area: Rect, _app: &mut App) {
@@ -441,8 +447,16 @@ fn draw_analytics(f: &mut Frame, area: Rect, _app: &mut App) {
     let max_rx = values_rx.iter().copied().max().unwrap_or(1024).max(1024);
 
     // Get current rate for display
-    let current_tx = _app.net_data.last().map(|n| n.net_tx).unwrap_or(0);
-    let current_rx = _app.net_data.last().map(|n| n.net_rx).unwrap_or(0);
+    let current_tx = _app
+        .net_data_as_slice()
+        .last()
+        .map(|n| n.net_tx)
+        .unwrap_or(0);
+    let current_rx = _app
+        .net_data_as_slice()
+        .last()
+        .map(|n| n.net_rx)
+        .unwrap_or(0);
     let tx_title = format!("Upload - {}/s", format_bytes(current_tx * 100)); // *100 to reverse scaling
     let rx_title = format!("Download - {}/s", format_bytes(current_rx * 100));
 
