@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRUD Example</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .form-group { margin-bottom: 10px; }
+        ul { list-style: none; padding: 0; }
+        li { padding: 10px; border-bottom: 1px solid #ccc; display: flex; justify-content: space-between; }
+        button { cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>CRUD Items</h1>
+    
+    <div class="form-group">
+        <input type="text" id="name" placeholder="Name">
+        <input type="text" id="description" placeholder="Description">
+        <button onclick="createItem()">Add Item</button>
+    </div>
+
+    <ul id="itemList"></ul>
+
+    <script>
+        async function loadItems() {
+            const res = await fetch('/api/items');
+            const items = await res.json();
+            const list = document.getElementById('itemList');
+            list.innerHTML = '';
+            items.forEach(item => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <span><strong>${item.name}</strong>: ${item.description}</span>
+                    <button onclick="deleteItem('${item.id}')">Delete</button>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        async function createItem() {
+            const name = document.getElementById('name').value;
+            const description = document.getElementById('description').value;
+            if (!name || !description) return;
+
+            await fetch('/api/items', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, description })
+            });
+            document.getElementById('name').value = '';
+            document.getElementById('description').value = '';
+            loadItems();
+        }
+
+        async function deleteItem(id) {
+            await fetch(`/api/items/${id}`, { method: 'DELETE' });
+            loadItems();
+        }
+
+        loadItems();
+    </script>
+</body>
+</html>
