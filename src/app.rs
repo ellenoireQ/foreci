@@ -92,6 +92,8 @@ pub struct NetData {
     pub net_tx: u64,
 }
 
+const MAX_POINT: usize = 120;
+
 pub struct App {
     pub current_tab: Tab,
     pub containers: Vec<DockerCompose>,
@@ -139,7 +141,7 @@ impl Default for App {
             log_rx: None,
             log_scroll: 0,
             analytics_rx: None,
-            cpu_data: VecDeque::with_capacity(60),
+            cpu_data: VecDeque::with_capacity(MAX_POINT),
             last_scroll: Instant::now(),
             scroll_offset: 0,
             analytics: CPUUsage {
@@ -569,7 +571,7 @@ impl App {
      * update_cpu_scroll(void) ref: ui.rs => update_cpu_scroll();
      * */
     pub fn cpu_push_data(&mut self, value: u64) {
-        if self.cpu_data.len() == 120 {
+        if self.cpu_data.len() == MAX_POINT {
             self.cpu_data.pop_front();
         }
         self.cpu_data.push_back(value);
@@ -588,7 +590,7 @@ impl App {
         }
     }
     pub fn mem_push_data(&mut self, value: u64) {
-        if self.mem_data.len() == 120 {
+        if self.mem_data.len() == MAX_POINT {
             self.mem_data.pop_front();
         }
         self.mem_data.push_back(value);
