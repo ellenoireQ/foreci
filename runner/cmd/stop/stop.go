@@ -5,18 +5,11 @@ package stop
 
 import (
 	"context"
-	"encoding/json"
-	"os"
+	"fmt"
 
 	"github.com/moby/moby/client"
 	"github.com/spf13/cobra"
 )
-
-type StopResult struct {
-	ContainerID string `json:"container_id"`
-	Status      string `json:"status"`
-	Error       string `json:"error,omitempty"`
-}
 
 var StopCmd = &cobra.Command{
 	Use:   "stop [container_id]",
@@ -29,36 +22,20 @@ var StopCmd = &cobra.Command{
 	},
 }
 
-func outputJSON(result StopResult) {
-	encoder := json.NewEncoder(os.Stdout)
-	encoder.Encode(result)
-}
-
 func StopContainer(containerID string) {
 	ctx := context.Background()
 	cli, err := client.New(client.FromEnv)
 	if err != nil {
-		outputJSON(StopResult{
-			ContainerID: containerID,
-			Status:      "error",
-			Error:       err.Error(),
-		})
+		fmt.Printf("Container with ID %s has an error %s", containerID, err.Error())
 		return
 	}
 	defer cli.Close()
 
 	_, err = cli.ContainerStop(ctx, containerID, client.ContainerStopOptions{})
 	if err != nil {
-		outputJSON(StopResult{
-			ContainerID: containerID,
-			Status:      "error",
-			Error:       err.Error(),
-		})
+		fmt.Printf("Container with ID %s has an error %s", containerID, err.Error())
 		return
 	}
 
-	outputJSON(StopResult{
-		ContainerID: containerID,
-		Status:      "stopped",
-	})
+	fmt.Printf("Container with ID %s has been stopped", containerID)
 }
