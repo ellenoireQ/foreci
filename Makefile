@@ -1,4 +1,7 @@
-.PHONY: all build-rust build-go clean run
+.PHONY: all build-rust build-go clean run install uninstall
+
+PREFIX ?= /usr/local
+BINDIR = $(PREFIX)/bin
 
 all: build-rust build-go
 
@@ -13,4 +16,19 @@ clean:
 	rm -f bin/runner
 
 run: all
-	./target/release/foreci
+	./target/release/easydocker
+
+install: all
+	@echo "Installing easydocker to $(BINDIR)..."
+	sudo mkdir -p $(BINDIR)
+	sudo cp target/release/easydocker $(BINDIR)/easydocker
+	sudo cp bin/runner $(BINDIR)/easydocker-runner
+	sudo chmod +x $(BINDIR)/easydocker
+	sudo chmod +x $(BINDIR)/easydocker-runner
+	@echo "Installation complete! Run 'easydocker' to start."
+
+uninstall:
+	@echo "Uninstalling easydocker from $(BINDIR)..."
+	sudo rm -f $(BINDIR)/easydocker
+	sudo rm -f $(BINDIR)/easydocker-runner
+	@echo "Uninstallation complete."

@@ -220,7 +220,7 @@ impl App {
         let mut results: Vec<FilePath> = vec![];
         self.loading = true;
         self.containers.clear();
-        if let Ok(output) = Command::new("./bin/runner")
+        if let Ok(output) = Command::new("easydocker-runner")
             .args(["search", "docker-compose.yml"])
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -237,7 +237,7 @@ impl App {
 
         for file_path in &results {
             let full_path = format!("{}/docker-compose.yml", file_path.filepath);
-            if let Ok(output) = Command::new("./bin/runner")
+            if let Ok(output) = Command::new("easydocker-runner")
                 .args(["read", "compose", &full_path])
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
@@ -261,7 +261,7 @@ impl App {
         self.loading = true;
         self.images.clear();
 
-        if let Ok(output) = Command::new("./bin/runner")
+        if let Ok(output) = Command::new("easydocker-runner")
             .args(["images"])
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -301,7 +301,7 @@ impl App {
         self.loading = true;
         self.running_containers.clear();
 
-        if let Ok(output) = Command::new("./bin/runner")
+        if let Ok(output) = Command::new("easydocker-runner")
             .args(["list"])
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -534,7 +534,7 @@ impl App {
                         self.loading = true;
 
                         tokio::spawn(async move {
-                            if let Ok(mut child) = Command::new("./bin/runner")
+                            if let Ok(mut child) = Command::new("easydocker-runner")
                                 .args(["rmi", image_id.as_str()])
                                 .stdout(Stdio::piped())
                                 .stderr(Stdio::piped())
@@ -676,7 +676,7 @@ impl App {
                         self.loading = true;
 
                         tokio::spawn(async move {
-                            if let Ok(mut child) = Command::new("./bin/runner")
+                            if let Ok(mut child) = Command::new("easydocker-runner")
                                 .args(&args)
                                 .stdout(Stdio::piped())
                                 .stderr(Stdio::piped())
@@ -708,7 +708,7 @@ impl App {
                             &format!("Starting container: {}", target_name),
                         );
 
-                        if let Ok(output) = Command::new("./bin/runner")
+                        if let Ok(output) = Command::new("easydocker-runner")
                             .args(["list"])
                             .stdout(Stdio::piped())
                             .stderr(Stdio::piped())
@@ -738,7 +738,7 @@ impl App {
                                 let container_id = parsed.id.clone();
 
                                 tokio::spawn(async move {
-                                    if let Ok(mut child) = Command::new("./bin/runner")
+                                    if let Ok(mut child) = Command::new("easydocker-runner")
                                         .args(["start", container_id.as_str()])
                                         .stdout(Stdio::piped())
                                         .stderr(Stdio::piped())
@@ -777,7 +777,7 @@ impl App {
                             &format!("Stopping container: {}", target_name),
                         );
 
-                        if let Ok(output) = Command::new("./bin/runner")
+                        if let Ok(output) = Command::new("easydocker-runner")
                             .args(["list"])
                             .stdout(Stdio::piped())
                             .stderr(Stdio::piped())
@@ -807,7 +807,7 @@ impl App {
                                 let container_id = parsed.id.clone();
 
                                 tokio::spawn(async move {
-                                    if let Ok(mut child) = Command::new("./bin/runner")
+                                    if let Ok(mut child) = Command::new("easydocker-runner")
                                         .args(["stop", container_id.as_str()])
                                         .stdout(Stdio::piped())
                                         .stderr(Stdio::piped())
@@ -1008,7 +1008,7 @@ impl App {
         let container_id = container_id.to_string();
 
         tokio::spawn(async move {
-            if let Ok(mut child) = Command::new("./bin/runner")
+            if let Ok(mut child) = Command::new("easydocker-runner")
                 .args(["stream", &container_id])
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
