@@ -43,4 +43,5 @@ func init() {
 	rootCmd.AddCommand(stream.StreamCmd)
 	rootCmd.AddCommand(stop.StopCmd)
 	rootCmd.AddCommand(delete.DeleteImageCmd)
+	rootCmd.AddCommand(delete.DeleteContainerCmd)
 }
