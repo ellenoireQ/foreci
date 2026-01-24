@@ -971,7 +971,10 @@ impl App {
                         "error" => {
                             self.log.print_mes(
                                 LogType::Error,
-                                &format!("Pull failed: {}", status.error),
+                                &format!(
+                                    "Pull failed: {}. Please try to run Delete Container action!",
+                                    status.error
+                                ),
                             );
                         }
                         "running" | "created" => {
