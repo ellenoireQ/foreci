@@ -25,7 +25,6 @@ pub enum MenuAction {
     BuildAndStart,
     Start,
     Stop,
-    Delete,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -509,7 +508,7 @@ impl App {
                 0 => MenuAction::BuildAndStart,
                 1 => MenuAction::Start,
                 2 => MenuAction::Stop,
-                _ => MenuAction::Delete,
+                _ => unreachable!(),
             })
         } else {
             None
@@ -733,16 +732,6 @@ impl App {
                                     &format!("Container not started: {}", target_name),
                                 );
                             }
-                        }
-                    }
-                    Some(MenuAction::Delete) => {
-                        self.log
-                            .print_mes(LogType::Info, &format!("Deleting: {}", container.name));
-                        self.containers.remove(idx);
-                        if self.containers.is_empty() {
-                            self.container_state.select(None);
-                        } else if idx >= self.containers.len() {
-                            self.container_state.select(Some(self.containers.len() - 1));
                         }
                     }
                     None => {}
