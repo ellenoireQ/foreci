@@ -27,6 +27,11 @@ pub enum MenuAction {
     Stop,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum ImageMenuAction {
+    Delete,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct DockerCompose {
     pub name: String,
@@ -139,6 +144,8 @@ pub struct App {
     pub images: Vec<DockerImage>,
     pub image_state: ListState,
     pub image_idx: Option<usize>,
+    pub image_expanded_index: Option<usize>,
+    pub image_menu_selection: usize,
     pub log_rx: Option<tokio::sync::mpsc::Receiver<String>>,
     pub log_scroll: u16,
 
@@ -175,6 +182,8 @@ impl Default for App {
             images: Vec::new(),
             image_state: ListState::default(),
             image_idx: None,
+            image_expanded_index: None,
+            image_menu_selection: 0,
             log_rx: None,
             log_scroll: 0,
             analytics_rx: None,
@@ -472,6 +481,43 @@ impl App {
         };
         self.image_state.select(Some(i));
         self.image_idx = Some(i);
+    }
+
+    pub fn toggle_image_expand(&mut self) {
+        if let Some(selected) = self.image_state.selected() {
+            if self.image_expanded_index == Some(selected) {
+                self.image_expanded_index = None;
+                self.image_menu_selection = 0;
+            } else {
+                self.image_expanded_index = Some(selected);
+                self.image_menu_selection = 0;
+            }
+        }
+    }
+
+    pub fn image_menu_next(&mut self) {
+        if self.image_expanded_index.is_some() {
+            // Only 1 menu item (Delete), so selection stays at 0
+            self.image_menu_selection = 0;
+        }
+    }
+
+    pub fn image_menu_prev(&mut self) {
+        if self.image_expanded_index.is_some() {
+            // Only 1 menu item (Delete), so selection stays at 0
+            self.image_menu_selection = 0;
+        }
+    }
+
+    pub fn get_image_menu_action(&self) -> Option<ImageMenuAction> {
+        if self.image_expanded_index.is_some() {
+            Some(match self.image_menu_selection {
+                0 => ImageMenuAction::Delete,
+                _ => ImageMenuAction::Delete,
+            })
+        } else {
+            None
+        }
     }
 
     pub fn toggle_expand(&mut self) {

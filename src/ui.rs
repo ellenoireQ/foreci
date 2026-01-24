@@ -233,7 +233,7 @@ fn draw_images(f: &mut Frame, area: Rect, app: &mut App) {
     } else if app.images.is_empty() {
         items.push(ListItem::new("No images found. Press 'i' to refresh."));
     } else {
-        for image in &app.images {
+        for (idx, image) in app.images.clone().iter().enumerate() {
             let display = format!("🐳 {}:{}", image.repository, image.tag);
             items.push(
                 ListItem::new(display).style(
@@ -242,6 +242,17 @@ fn draw_images(f: &mut Frame, area: Rect, app: &mut App) {
                         .add_modifier(Modifier::BOLD),
                 ),
             );
+            if app.image_expanded_index == Some(idx) {
+                let menu_items = ["  Delete"];
+                for (menu_idx, menu_item) in menu_items.iter().enumerate() {
+                    let style = if menu_idx == app.image_menu_selection {
+                        Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)
+                    } else {
+                        Style::default().fg(Color::Gray)
+                    };
+                    items.push(ListItem::new(*menu_item).style(style));
+                }
+            }
         }
     }
 
@@ -259,9 +270,15 @@ fn draw_images(f: &mut Frame, area: Rect, app: &mut App) {
         .borders(Borders::ALL)
         .title("Image Details");
 
+    let list_height = if app.image_expanded_index.is_some() {
+        9
+    } else {
+        8
+    };
+
     let main = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(8), Constraint::Fill(1)])
+        .constraints([Constraint::Length(list_height), Constraint::Fill(1)])
         .split(area);
 
     let inner = block.inner(main[1]);

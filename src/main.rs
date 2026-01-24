@@ -95,7 +95,13 @@ async fn main() -> io::Result<()> {
                                     app.select_prev_container();
                                 }
                             }
-                            app::Tab::Images => app.select_prev_image(),
+                            app::Tab::Images => {
+                                if app.image_expanded_index.is_some() {
+                                    app.image_menu_prev();
+                                } else {
+                                    app.select_prev_image();
+                                }
+                            }
                             app::Tab::Deployments => app.select_prev_running_container(),
                             _ => {}
                         },
@@ -107,7 +113,13 @@ async fn main() -> io::Result<()> {
                                     app.select_next_container();
                                 }
                             }
-                            app::Tab::Images => app.select_next_image(),
+                            app::Tab::Images => {
+                                if app.image_expanded_index.is_some() {
+                                    app.image_menu_next();
+                                } else {
+                                    app.select_next_image();
+                                }
+                            }
                             app::Tab::Deployments => app.select_next_running_container(),
                             _ => {}
                         },
@@ -119,6 +131,16 @@ async fn main() -> io::Result<()> {
                                     app.toggle_expand();
                                 }
                             }
+                            app::Tab::Images => {
+                                if app.image_expanded_index.is_some() {
+                                    // TODO: implement images delete action
+                                    app.log.print_mes(LogType::Info, "Delete action triggered");
+                                    app.image_expanded_index = None;
+                                    app.image_menu_selection = 0;
+                                } else {
+                                    app.toggle_image_expand();
+                                }
+                            }
                             app::Tab::Deployments => {
                                 app.select_running_container();
                             }
@@ -127,6 +149,8 @@ async fn main() -> io::Result<()> {
                         KeyCode::Esc => {
                             app.expanded_index = None;
                             app.menu_selection = 0;
+                            app.image_expanded_index = None;
+                            app.image_menu_selection = 0;
                         }
                         KeyCode::Left | KeyCode::Char('h') => {
                             if app.expanded_index.is_some() {
