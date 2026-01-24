@@ -17,6 +17,9 @@ Will scanning all directory in workspace, if found docker-compose.yml will be li
 - 🐳 **Image Management** - List and delete Docker images
 - 📊 **Real-time Analytics** - Monitor CPU, memory, and network usage of running containers
 
+## Preview
+![Preview](./docs/gif/IMG_8807.gif)
+
 ## Installation
 
 ```bash
