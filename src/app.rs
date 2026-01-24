@@ -16,8 +16,6 @@ pub enum Tab {
     Containers,
     Images,
     Deployments,
-    Logs,
-    Settings,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -391,19 +389,15 @@ impl App {
         self.current_tab = match self.current_tab {
             Tab::Containers => Tab::Images,
             Tab::Images => Tab::Deployments,
-            Tab::Deployments => Tab::Logs,
-            Tab::Logs => Tab::Settings,
-            Tab::Settings => Tab::Containers,
+            Tab::Deployments => Tab::Containers,
         };
     }
 
     pub fn prev_tab(&mut self) {
         self.current_tab = match self.current_tab {
-            Tab::Containers => Tab::Settings,
+            Tab::Containers => Tab::Deployments,
             Tab::Images => Tab::Containers,
             Tab::Deployments => Tab::Images,
-            Tab::Logs => Tab::Deployments,
-            Tab::Settings => Tab::Logs,
         };
     }
 

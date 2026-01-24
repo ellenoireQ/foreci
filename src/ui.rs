@@ -45,14 +45,12 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
 }
 
 fn draw_tabs(f: &mut Frame, area: ratatui::layout::Rect, app: &App) {
-    let titles = vec!["Containers", "Images", "Analytics", "Logs", "Settings"];
+    let titles = vec!["Containers", "Images", "Analytics"];
 
     let selected = match app.current_tab {
         Tab::Containers => 0,
         Tab::Images => 1,
         Tab::Deployments => 2,
-        Tab::Logs => 3,
-        Tab::Settings => 4,
     };
 
     let tabs = Tabs::new(titles)
@@ -583,8 +581,6 @@ fn draw_content(f: &mut Frame, area: ratatui::layout::Rect, app: &mut App) {
         Tab::Containers => "Containers",
         Tab::Images => "Images",
         Tab::Deployments => "Analytics",
-        Tab::Logs => "Logs",
-        Tab::Settings => "Settings",
     };
 
     let block = Block::default()
@@ -600,12 +596,6 @@ fn draw_content(f: &mut Frame, area: ratatui::layout::Rect, app: &mut App) {
         Tab::Containers => draw_containers(f, inner, app),
         Tab::Images => draw_images(f, inner, app),
         Tab::Deployments => draw_analytics(f, inner, app),
-        Tab::Logs => {
-            //
-        }
-        Tab::Settings => {
-            //
-        }
     }
 }
 
@@ -616,7 +606,7 @@ fn draw_footer(f: &mut Frame, area: ratatui::layout::Rect, app: &mut App) {
         .split(area);
 
     let footer = Paragraph::new(
-        "q: Quit | r: Refresh | Tab: Switch | ↕: Select | ←/→: Scroll Log | Enter: Menu",
+        "q: Quit | r: Refresh | Tab/Shift+Tab: Switch Tab | ↑↓: Navigate | Enter: Open Menu | Esc: Close Menu | ←→: Scroll",
     )
     .block(Block::default().borders(Borders::NONE))
     .centered();
