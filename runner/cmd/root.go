@@ -7,22 +7,23 @@ import (
 	"fmt"
 	"os"
 
-	"foreci/runner/cmd/create"
-	"foreci/runner/cmd/delete"
-	"foreci/runner/cmd/images"
-	"foreci/runner/cmd/list"
-	"foreci/runner/cmd/start"
-	"foreci/runner/cmd/stop"
-	"foreci/runner/cmd/stream"
+	"easydocker/runner/cmd/create"
+	"easydocker/runner/cmd/delete"
+	"easydocker/runner/cmd/images"
+	"easydocker/runner/cmd/list"
+	"easydocker/runner/cmd/start"
+	"easydocker/runner/cmd/stop"
+	"easydocker/runner/cmd/stream"
+
 	"github.com/spf13/cobra"
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "foreci",
-	Short: "foreci CI/CD Tools",
+	Use:   "easydocker",
+	Short: "easydocker - Docker Management Tool",
 	Long:  `A continuous integration tool designed for easy integration with docker build systems`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Foreci Runner v0.1.0")
+		fmt.Println("Easydocker Runner v0.1.0")
 		fmt.Println("Use --help for available commands")
 	},
 }

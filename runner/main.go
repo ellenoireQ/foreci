@@ -4,7 +4,7 @@
 package main
 
 import (
-	"foreci/runner/cmd"
+	"easydocker/runner/cmd"
 )
 
 func main() {

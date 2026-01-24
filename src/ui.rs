@@ -58,7 +58,7 @@ fn draw_tabs(f: &mut Frame, area: ratatui::layout::Rect, app: &App) {
             Block::default()
                 .border_type(ratatui::widgets::BorderType::Rounded)
                 .borders(Borders::ALL)
-                .title("foreci"),
+                .title("easydocker"),
         )
         .select(selected)
         .highlight_style(

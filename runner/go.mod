@@ -1,4 +1,4 @@
-module foreci/runner
+module easydocker/runner
 
 go 1.25.5
 

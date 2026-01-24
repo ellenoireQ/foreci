@@ -4,9 +4,9 @@
 package cmd
 
 import (
-	"foreci/runner/cmd/read"
-	runjob "foreci/runner/cmd/run-job"
-	searchmatch "foreci/runner/cmd/search-match"
+	"easydocker/runner/cmd/read"
+	runjob "easydocker/runner/cmd/run-job"
+	searchmatch "easydocker/runner/cmd/search-match"
 	"log"
 
 	"github.com/spf13/cobra"

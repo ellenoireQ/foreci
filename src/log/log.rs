@@ -54,7 +54,7 @@ impl LogList {
     }
 
     pub async fn local(&mut self, message: &str) -> io::Result<()> {
-        let mut file = File::create("/tmp/foreci.txt").await?;
+        let mut file = File::create("/tmp/easydocker.txt").await?;
 
         file.write_all(message.as_bytes()).await?;
 
