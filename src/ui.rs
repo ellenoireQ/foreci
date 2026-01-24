@@ -91,7 +91,7 @@ fn draw_containers(f: &mut Frame, area: Rect, app: &mut App) {
                 app.toggle_details();
                 let s = format!("{}", app.details_state.clone());
                 app.log.print_mes(LogType::Info, s.as_str());
-                let menu_items = ["  Build & Start", "  Start", "  Stop"];
+                let menu_items = ["  Build & Start", "  Start", "  Stop", "  Delete Container"];
                 for (menu_idx, menu_item) in menu_items.iter().enumerate() {
                     let style = if menu_idx == app.menu_selection {
                         Style::default()
@@ -119,7 +119,7 @@ fn draw_containers(f: &mut Frame, area: Rect, app: &mut App) {
         .borders(Borders::ALL)
         .title("Details");
 
-    let list_height = if app.expanded_index.is_some() { 9 } else { 6 };
+    let list_height = if app.expanded_index.is_some() { 10 } else { 6 };
 
     let main = Layout::default()
         .direction(Direction::Vertical)

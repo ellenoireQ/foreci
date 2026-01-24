@@ -23,6 +23,7 @@ pub enum MenuAction {
     BuildAndStart,
     Start,
     Stop,
+    DeleteContainer,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -586,14 +587,14 @@ impl App {
 
     pub fn menu_next(&mut self) {
         if self.expanded_index.is_some() {
-            self.menu_selection = (self.menu_selection + 1) % 3;
+            self.menu_selection = (self.menu_selection + 1) % 4;
         }
     }
 
     pub fn menu_prev(&mut self) {
         if self.expanded_index.is_some() {
             self.menu_selection = if self.menu_selection == 0 {
-                2
+                3
             } else {
                 self.menu_selection - 1
             };
@@ -606,6 +607,7 @@ impl App {
                 0 => MenuAction::BuildAndStart,
                 1 => MenuAction::Start,
                 2 => MenuAction::Stop,
+                3 => MenuAction::DeleteContainer,
                 _ => unreachable!(),
             })
         } else {
@@ -828,6 +830,75 @@ impl App {
                                 self.log.print_mes(
                                     LogType::Error,
                                     &format!("Container not started: {}", target_name),
+                                );
+                            }
+                        }
+                    }
+                    Some(MenuAction::DeleteContainer) => {
+                        let target_name = if !container.container_name.is_empty() {
+                            container.container_name.clone()
+                        } else if !container.service.is_empty() {
+                            format!("{}-{}", container.name, container.service)
+                        } else {
+                            container.name.clone()
+                        };
+
+                        self.log.print_mes(
+                            LogType::Info,
+                            &format!("Deleting container: {}", target_name),
+                        );
+
+                        if let Ok(output) = Command::new("easydocker-runner")
+                            .args(["list"])
+                            .stdout(Stdio::piped())
+                            .stderr(Stdio::piped())
+                            .output()
+                            .await
+                        {
+                            let stdout = String::from_utf8_lossy(&output.stdout);
+                            let mut found_container: Option<RunningContainer> = None;
+
+                            for line in stdout.lines() {
+                                if let Ok(parsed) = serde_json::from_str::<RunningContainer>(line) {
+                                    if parsed
+                                        .names
+                                        .iter()
+                                        .any(|n| n == &target_name || n.contains(&target_name))
+                                    {
+                                        found_container = Some(parsed);
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if let Some(parsed) = found_container {
+                                let (tx, rx) = tokio::sync::mpsc::channel::<String>(100);
+                                self.log_rx = Some(rx);
+                                self.loading = true;
+                                let container_id = parsed.id.clone();
+
+                                tokio::spawn(async move {
+                                    if let Ok(mut child) = Command::new("easydocker-runner")
+                                        .args(["rm", container_id.as_str()])
+                                        .stdout(Stdio::piped())
+                                        .stderr(Stdio::piped())
+                                        .spawn()
+                                    {
+                                        if let Some(stdout) = child.stdout.take() {
+                                            let mut reader = BufReader::new(stdout).lines();
+
+                                            while let Ok(Some(line)) = reader.next_line().await {
+                                                let _ = tx.send(line).await;
+                                            }
+                                        }
+                                        let _ = child.wait().await;
+                                    }
+                                    let _ = tx.send("__DONE__".to_string()).await;
+                                });
+                            } else {
+                                self.log.print_mes(
+                                    LogType::Error,
+                                    &format!("Container not found: {}", target_name),
                                 );
                             }
                         }
