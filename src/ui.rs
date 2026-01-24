@@ -231,7 +231,7 @@ fn draw_images(f: &mut Frame, area: Rect, app: &mut App) {
     if app.loading {
         items.push(ListItem::new("⏳ Loading images..."));
     } else if app.images.is_empty() {
-        items.push(ListItem::new("No images found. Press 'i' to refresh."));
+        items.push(ListItem::new("No images found. Press 'r' to refresh."));
     } else {
         for (idx, image) in app.images.clone().iter().enumerate() {
             let display = format!("🐳 {}:{}", image.repository, image.tag);

@@ -133,10 +133,7 @@ async fn main() -> io::Result<()> {
                             }
                             app::Tab::Images => {
                                 if app.image_expanded_index.is_some() {
-                                    // TODO: implement images delete action
-                                    app.log.print_mes(LogType::Info, "Delete action triggered");
-                                    app.image_expanded_index = None;
-                                    app.image_menu_selection = 0;
+                                    app.execute_image_menu_action().await;
                                 } else {
                                     app.toggle_image_expand();
                                 }

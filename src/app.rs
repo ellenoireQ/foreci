@@ -520,6 +520,64 @@ impl App {
         }
     }
 
+    pub async fn execute_image_menu_action(&mut self) {
+        if let Some(idx) = self.image_expanded_index {
+            if idx < self.images.len() {
+                let action = self.get_image_menu_action();
+                let image = self.images[idx].clone();
+
+                match action {
+                    Some(ImageMenuAction::Delete) => {
+                        self.log.print_mes(
+                            LogType::Info,
+                            &format!("Deleting image: {}:{}", image.repository, image.tag),
+                        );
+
+                        let image_id = image.image_id.clone();
+
+                        let (tx, rx) = tokio::sync::mpsc::channel::<String>(100);
+                        self.log_rx = Some(rx);
+                        self.loading = true;
+
+                        tokio::spawn(async move {
+                            if let Ok(mut child) = Command::new("./bin/runner")
+                                .args(["rmi", image_id.as_str()])
+                                .stdout(Stdio::piped())
+                                .stderr(Stdio::piped())
+                                .spawn()
+                            {
+                                if let Some(stdout) = child.stdout.take() {
+                                    let mut reader = BufReader::new(stdout).lines();
+
+                                    while let Ok(Some(line)) = reader.next_line().await {
+                                        let _ = tx.send(line).await;
+                                    }
+                                }
+                                let _ = child.wait().await;
+                            }
+                            let _ = tx.send("__DONE__".to_string()).await;
+                        });
+
+                        self.images.remove(idx);
+                        if self.image_idx.is_some() && idx > 0 {
+                            self.image_idx = Some(idx - 1);
+                            self.image_state.select(Some(idx - 1));
+                        } else if !self.images.is_empty() {
+                            self.image_idx = Some(0);
+                            self.image_state.select(Some(0));
+                        } else {
+                            self.image_idx = None;
+                            self.image_state.select(None);
+                        }
+                    }
+                    None => {}
+                }
+                self.image_expanded_index = None;
+                self.image_menu_selection = 0;
+            }
+        }
+    }
+
     pub fn toggle_expand(&mut self) {
         if let Some(selected) = self.container_state.selected() {
             if self.expanded_index == Some(selected) {
