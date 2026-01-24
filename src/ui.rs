@@ -606,7 +606,7 @@ fn draw_footer(f: &mut Frame, area: ratatui::layout::Rect, app: &mut App) {
         .split(area);
 
     let footer = Paragraph::new(
-        "q: Quit | r: Refresh | Tab/Shift+Tab: Switch Tab | ↑↓: Navigate | Enter: Open Menu | Esc: Close Menu | ←→: Scroll",
+        "q: Quit | r: Refresh | Tab/Shift+Tab: Switch Tab | ↑↓: Navigate | Enter: Open Menu | Esc: Close Menu | ←→: Scroll logs",
     )
     .block(Block::default().borders(Borders::NONE))
     .centered();
