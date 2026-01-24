@@ -598,6 +598,19 @@ impl App {
                         });
                     }
                     Some(MenuAction::Start) => {
+                        let target_name = if !container.container_name.is_empty() {
+                            container.container_name.clone()
+                        } else if !container.service.is_empty() {
+                            format!("{}-{}", container.name, container.service)
+                        } else {
+                            container.name.clone()
+                        };
+
+                        self.log.print_mes(
+                            LogType::Info,
+                            &format!("Starting container: {}", target_name),
+                        );
+
                         if let Ok(output) = Command::new("./bin/runner")
                             .args(["list"])
                             .stdout(Stdio::piped())
@@ -606,31 +619,50 @@ impl App {
                             .await
                         {
                             let stdout = String::from_utf8_lossy(&output.stdout);
+                            let mut found_container: Option<RunningContainer> = None;
+
                             for line in stdout.lines() {
                                 if let Ok(parsed) = serde_json::from_str::<RunningContainer>(line) {
-                                    let (tx, rx) = tokio::sync::mpsc::channel::<String>(100);
-                                    self.log_rx = Some(rx);
-                                    self.loading = true;
-                                    tokio::spawn(async move {
-                                        if let Ok(mut child) = Command::new("./bin/runner")
-                                            .args(["start", parsed.id.as_str()])
-                                            .stdout(Stdio::piped())
-                                            .stderr(Stdio::piped())
-                                            .spawn()
-                                        {
-                                            if let Some(stdout) = child.stdout.take() {
-                                                let mut reader = BufReader::new(stdout).lines();
-
-                                                while let Ok(Some(line)) = reader.next_line().await
-                                                {
-                                                    let _ = tx.send(line).await;
-                                                }
-                                            }
-                                            let _ = child.wait().await;
-                                        }
-                                        let _ = tx.send("__DONE__".to_string()).await;
-                                    });
+                                    if parsed
+                                        .names
+                                        .iter()
+                                        .any(|n| n == &target_name || n.contains(&target_name))
+                                    {
+                                        found_container = Some(parsed);
+                                        break;
+                                    }
                                 }
+                            }
+
+                            if let Some(parsed) = found_container {
+                                let (tx, rx) = tokio::sync::mpsc::channel::<String>(100);
+                                self.log_rx = Some(rx);
+                                self.loading = true;
+                                let container_id = parsed.id.clone();
+
+                                tokio::spawn(async move {
+                                    if let Ok(mut child) = Command::new("./bin/runner")
+                                        .args(["start", container_id.as_str()])
+                                        .stdout(Stdio::piped())
+                                        .stderr(Stdio::piped())
+                                        .spawn()
+                                    {
+                                        if let Some(stdout) = child.stdout.take() {
+                                            let mut reader = BufReader::new(stdout).lines();
+
+                                            while let Ok(Some(line)) = reader.next_line().await {
+                                                let _ = tx.send(line).await;
+                                            }
+                                        }
+                                        let _ = child.wait().await;
+                                    }
+                                    let _ = tx.send("__DONE__".to_string()).await;
+                                });
+                            } else {
+                                self.log.print_mes(
+                                    LogType::Error,
+                                    &format!("Container not found: {}", target_name),
+                                );
                             }
                         }
                     }
