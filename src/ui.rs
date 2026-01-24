@@ -120,9 +120,12 @@ fn draw_containers(f: &mut Frame, area: Rect, app: &mut App) {
         .border_type(ratatui::widgets::BorderType::Rounded)
         .borders(Borders::ALL)
         .title("Details");
+
+    let list_height = if app.expanded_index.is_some() { 9 } else { 6 };
+
     let main = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(6), Constraint::Fill(1)])
+        .constraints([Constraint::Length(list_height), Constraint::Fill(1)])
         .split(area);
     let inner = block.inner(main[1]);
     f.render_stateful_widget(list, main[0], &mut app.container_state);
