@@ -8,12 +8,12 @@ import (
 	"os"
 
 	"foreci/runner/cmd/create"
+	"foreci/runner/cmd/delete"
 	"foreci/runner/cmd/images"
 	"foreci/runner/cmd/list"
 	"foreci/runner/cmd/start"
 	"foreci/runner/cmd/stop"
 	"foreci/runner/cmd/stream"
-
 	"github.com/spf13/cobra"
 )
 
@@ -41,4 +41,5 @@ func init() {
 	rootCmd.AddCommand(list.ListCmd)
 	rootCmd.AddCommand(stream.StreamCmd)
 	rootCmd.AddCommand(stop.StopCmd)
+	rootCmd.AddCommand(delete.DeleteImageCmd)
 }
