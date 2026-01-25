@@ -128,7 +128,7 @@ pub struct StartContainer {
     pub status: String,
 }
 
-const MAX_POINT: usize = 120;
+const MAX_POINT: usize = 60;
 
 pub struct App {
     pub current_tab: Tab,
