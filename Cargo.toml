@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-anyhow = "1.0.101"
+anyhow = "1.0.102"
 crossterm = "0.29.0"
 rand = "0.10.0"
 ratatui = "0.30.0"
