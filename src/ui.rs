@@ -5,7 +5,7 @@ use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    widgets::{Block, Borders, Cell, List, ListItem, Paragraph, Row, Sparkline, Table},
+    widgets::{Block, Borders, Cell, Clear, List, ListItem, Paragraph, Row, Sparkline, Table},
 };
 
 use crate::app::{App, Tab};
@@ -58,7 +58,11 @@ pub fn draw_ui(f: &mut Frame, app: &mut App) {
     draw_left_running(f, left[2], app);
     draw_right_panel(f, content[1], app);
     draw_logs(f, root[1], app);
-    draw_keybindings(f, root[2]);
+    draw_keybindings(f, root[2], app);
+
+    if app.env_editor_open {
+        draw_env_editor(f, app);
+    }
 }
 
 fn active_border(is_active: bool) -> Style {
@@ -476,12 +480,95 @@ fn draw_logs(f: &mut Frame, area: Rect, app: &mut App) {
     f.render_widget(para, area);
 }
 
-fn draw_keybindings(f: &mut Frame, area: Rect) {
-    let text = " q: Quit  r: Refresh  Tab/Shift+Tab: Switch Panel  ↑↓: Navigate  Enter: Menu  Esc: Close  ←→: Scroll logs";
+fn draw_keybindings(f: &mut Frame, area: Rect, app: &App) {
+    let text = if app.current_tab == Tab::Containers && !app.env_editor_open {
+        " q: Quit  r: Refresh  Tab: Switch  ↑↓: Navigate  Enter: Menu  e: Edit Env  Esc: Close"
+    } else {
+        " q: Quit  r: Refresh  Tab/Shift+Tab: Switch Panel  ↑↓: Navigate  Enter: Menu  Esc: Close"
+    };
     f.render_widget(
         Paragraph::new(text)
             .style(Style::default().fg(Color::DarkGray))
             .centered(),
         area,
+    );
+}
+
+fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+    let popup_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Percentage((100 - percent_y) / 2),
+            Constraint::Percentage(percent_y),
+            Constraint::Percentage((100 - percent_y) / 2),
+        ])
+        .split(r);
+    Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage((100 - percent_x) / 2),
+            Constraint::Percentage(percent_x),
+            Constraint::Percentage((100 - percent_x) / 2),
+        ])
+        .split(popup_layout[1])[1]
+}
+
+fn draw_env_editor(f: &mut Frame, app: &App) {
+    let area = centered_rect(60, 70, f.area());
+    f.render_widget(Clear, area);
+
+    let block = Block::default()
+        .border_type(ratatui::widgets::BorderType::Rounded)
+        .borders(Borders::ALL)
+        .title(" Edit Environment Variables ")
+        .border_style(Style::default().fg(Color::Green));
+    let inner = block.inner(area);
+    f.render_widget(block, area);
+
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(1), Constraint::Length(1)])
+        .split(inner);
+
+    let items: Vec<ListItem> = app
+        .env_editor_lines
+        .iter()
+        .enumerate()
+        .map(|(i, line)| {
+            let is_sel = i == app.env_editor_selected;
+            let is_editing = is_sel && app.env_editor_editing;
+
+            let text = if is_editing {
+                format!("{}▌", app.env_editor_buffer)
+            } else if line.is_empty() {
+                "(empty)".to_string()
+            } else {
+                line.clone()
+            };
+
+            let style = if is_sel {
+                if is_editing {
+                    Style::default().fg(Color::Black).bg(Color::Green)
+                } else {
+                    Style::default().fg(Color::Black).bg(Color::Yellow)
+                }
+            } else {
+                Style::default().fg(Color::White)
+            };
+
+            ListItem::new(text).style(style)
+        })
+        .collect();
+
+    f.render_widget(List::new(items), chunks[0]);
+
+    let hint = if app.env_editor_editing {
+        " Enter: confirm  Esc: cancel edit"
+    } else {
+        " Enter: edit  a: add  d/x: delete  s: save & close  Esc: close without saving"
+    };
+    f.render_widget(
+        Paragraph::new(hint).style(Style::default().fg(Color::DarkGray)),
+        chunks[1],
     );
 }

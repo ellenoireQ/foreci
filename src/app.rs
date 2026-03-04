@@ -164,6 +164,12 @@ pub struct App {
     pub running_container_state: ListState,
     pub running_container_idx: Option<usize>,
     pub selected_container_id: Option<String>,
+
+    pub env_editor_open: bool,
+    pub env_editor_lines: Vec<String>,
+    pub env_editor_selected: usize,
+    pub env_editor_editing: bool,
+    pub env_editor_buffer: String,
 }
 
 impl Default for App {
@@ -212,6 +218,11 @@ impl Default for App {
             running_container_state: ListState::default(),
             running_container_idx: None,
             selected_container_id: None,
+            env_editor_open: false,
+            env_editor_lines: Vec::new(),
+            env_editor_selected: 0,
+            env_editor_editing: false,
+            env_editor_buffer: String::new(),
         }
     }
 }
@@ -1202,5 +1213,94 @@ impl App {
         }
 
         has_updates
+    }
+
+    pub fn open_env_editor(&mut self) {
+        if let Some(idx) = self.container_idx {
+            if let Some(ctn) = self.containers.get(idx) {
+                self.env_editor_lines = ctn.environment.clone();
+                if self.env_editor_lines.is_empty() {
+                    self.env_editor_lines.push(String::new());
+                }
+                self.env_editor_selected = 0;
+                self.env_editor_editing = false;
+                self.env_editor_buffer = String::new();
+                self.env_editor_open = true;
+            }
+        }
+    }
+
+    pub fn close_env_editor(&mut self) {
+        self.env_editor_open = false;
+        self.env_editor_editing = false;
+        self.env_editor_buffer = String::new();
+    }
+
+    pub fn save_env_editor(&mut self) {
+        if let Some(idx) = self.container_idx {
+            if let Some(ctn) = self.containers.get_mut(idx) {
+                ctn.environment = self.env_editor_lines
+                    .iter()
+                    .filter(|s| !s.trim().is_empty())
+                    .cloned()
+                    .collect();
+            }
+        }
+        self.close_env_editor();
+    }
+
+    pub fn env_editor_move_up(&mut self) {
+        if self.env_editor_selected > 0 {
+            self.env_editor_selected -= 1;
+        }
+    }
+
+    pub fn env_editor_move_down(&mut self) {
+        if self.env_editor_selected + 1 < self.env_editor_lines.len() {
+            self.env_editor_selected += 1;
+        }
+    }
+
+    pub fn env_editor_start_edit(&mut self) {
+        if self.env_editor_selected < self.env_editor_lines.len() {
+            self.env_editor_buffer = self.env_editor_lines[self.env_editor_selected].clone();
+            self.env_editor_editing = true;
+        }
+    }
+
+    pub fn env_editor_confirm_edit(&mut self) {
+        if self.env_editor_selected < self.env_editor_lines.len() {
+            self.env_editor_lines[self.env_editor_selected] = self.env_editor_buffer.clone();
+        }
+        self.env_editor_editing = false;
+        self.env_editor_buffer = String::new();
+    }
+
+    pub fn env_editor_add_line(&mut self) {
+        let insert_at = self.env_editor_selected + 1;
+        self.env_editor_lines.insert(insert_at, String::new());
+        self.env_editor_selected = insert_at;
+        self.env_editor_buffer = String::new();
+        self.env_editor_editing = true;
+    }
+
+    pub fn env_editor_delete_line(&mut self) {
+        if !self.env_editor_lines.is_empty() {
+            self.env_editor_lines.remove(self.env_editor_selected);
+            if self.env_editor_lines.is_empty() {
+                self.env_editor_lines.push(String::new());
+            }
+            if self.env_editor_selected >= self.env_editor_lines.len() {
+                self.env_editor_selected = self.env_editor_lines.len() - 1;
+            }
+        }
+    }
+
+    pub fn env_editor_input_char(&mut self, c: char) {
+        self.env_editor_buffer.push(c);
+    }
+
+    pub fn env_editor_backspace(&mut self) {
+        self.env_editor_buffer.pop();
     }
 }

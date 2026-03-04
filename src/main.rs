@@ -56,114 +56,159 @@ async fn main() -> io::Result<()> {
         if event::poll(Duration::from_millis(50))? {
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
-                    match key.code {
-                        KeyCode::Char('q') => break,
-                        KeyCode::Char('r') | KeyCode::Char('R') => match app.current_tab {
-                            app::Tab::Containers => app.fetch_containers().await,
-                            app::Tab::Images => app.fetch_images().await,
-                            app::Tab::Deployments => app.fetch_running_containers().await,
+                    if app.env_editor_open {
+                        match key.code {
+                            KeyCode::Esc => {
+                                if app.env_editor_editing {
+                                    app.env_editor_editing = false;
+                                    app.env_editor_buffer = String::new();
+                                } else {
+                                    app.close_env_editor();
+                                }
+                            }
+                            KeyCode::Enter => {
+                                if app.env_editor_editing {
+                                    app.env_editor_confirm_edit();
+                                } else {
+                                    app.env_editor_start_edit();
+                                }
+                            }
+                            KeyCode::Up | KeyCode::Char('k') if !app.env_editor_editing => {
+                                app.env_editor_move_up();
+                            }
+                            KeyCode::Down | KeyCode::Char('j') if !app.env_editor_editing => {
+                                app.env_editor_move_down();
+                            }
+                            KeyCode::Char('a') if !app.env_editor_editing => {
+                                app.env_editor_add_line();
+                            }
+                            KeyCode::Char('d') | KeyCode::Char('x')
+                                if !app.env_editor_editing =>
+                            {
+                                app.env_editor_delete_line();
+                            }
+                            KeyCode::Char('s') if !app.env_editor_editing => {
+                                app.save_env_editor();
+                            }
+                            KeyCode::Char(c) if app.env_editor_editing => {
+                                app.env_editor_input_char(c);
+                            }
+                            KeyCode::Backspace if app.env_editor_editing => {
+                                app.env_editor_backspace();
+                            }
                             _ => {}
-                        },
-                        KeyCode::Tab => {
-                            app.next_tab();
-                            if app.current_tab == app::Tab::Images && app.images.is_empty() {
-                                app.fetch_images().await;
-                            }
-                            if app.current_tab == app::Tab::Deployments
-                                && app.running_containers.is_empty()
-                            {
-                                app.fetch_running_containers().await;
-                            }
                         }
-                        KeyCode::BackTab => {
-                            app.prev_tab();
-                            if app.current_tab == app::Tab::Images && app.images.is_empty() {
-                                app.fetch_images().await;
+                    } else {
+                        match key.code {
+                            KeyCode::Char('q') => break,
+                            KeyCode::Char('r') | KeyCode::Char('R') => match app.current_tab {
+                                app::Tab::Containers => app.fetch_containers().await,
+                                app::Tab::Images => app.fetch_images().await,
+                                app::Tab::Deployments => app.fetch_running_containers().await,
+                            },
+                            KeyCode::Tab => {
+                                app.next_tab();
+                                if app.current_tab == app::Tab::Images && app.images.is_empty() {
+                                    app.fetch_images().await;
+                                }
+                                if app.current_tab == app::Tab::Deployments
+                                    && app.running_containers.is_empty()
+                                {
+                                    app.fetch_running_containers().await;
+                                }
                             }
-                            if app.current_tab == app::Tab::Deployments
-                                && app.running_containers.is_empty()
-                            {
-                                app.fetch_running_containers().await;
+                            KeyCode::BackTab => {
+                                app.prev_tab();
+                                if app.current_tab == app::Tab::Images && app.images.is_empty() {
+                                    app.fetch_images().await;
+                                }
+                                if app.current_tab == app::Tab::Deployments
+                                    && app.running_containers.is_empty()
+                                {
+                                    app.fetch_running_containers().await;
+                                }
                             }
-                        }
-                        KeyCode::Char('d') => app.delete().await,
-                        KeyCode::Up | KeyCode::Char('k') => match app.current_tab {
-                            app::Tab::Containers => {
+                            KeyCode::Char('d') => app.delete().await,
+                            KeyCode::Up | KeyCode::Char('k') => match app.current_tab {
+                                app::Tab::Containers => {
+                                    if app.expanded_index.is_some() {
+                                        app.menu_prev();
+                                    } else {
+                                        app.select_prev_container();
+                                    }
+                                }
+                                app::Tab::Images => {
+                                    if app.image_expanded_index.is_some() {
+                                        app.image_menu_prev();
+                                    } else {
+                                        app.select_prev_image();
+                                    }
+                                }
+                                app::Tab::Deployments => app.select_prev_running_container(),
+                            },
+                            KeyCode::Down | KeyCode::Char('j') => match app.current_tab {
+                                app::Tab::Containers => {
+                                    if app.expanded_index.is_some() {
+                                        app.menu_next();
+                                    } else {
+                                        app.select_next_container();
+                                    }
+                                }
+                                app::Tab::Images => {
+                                    if app.image_expanded_index.is_some() {
+                                        app.image_menu_next();
+                                    } else {
+                                        app.select_next_image();
+                                    }
+                                }
+                                app::Tab::Deployments => app.select_next_running_container(),
+                            },
+                            KeyCode::Enter => match app.current_tab {
+                                app::Tab::Containers => {
+                                    if app.expanded_index.is_some() {
+                                        app.execute_menu_action().await;
+                                    } else {
+                                        app.toggle_expand();
+                                    }
+                                }
+                                app::Tab::Images => {
+                                    if app.image_expanded_index.is_some() {
+                                        app.execute_image_menu_action().await;
+                                    } else {
+                                        app.toggle_image_expand();
+                                    }
+                                }
+                                app::Tab::Deployments => {
+                                    app.select_running_container();
+                                }
+                            },
+                            KeyCode::Esc => {
+                                app.expanded_index = None;
+                                app.menu_selection = 0;
+                                app.image_expanded_index = None;
+                                app.image_menu_selection = 0;
+                            }
+                            KeyCode::Left | KeyCode::Char('h') => {
                                 if app.expanded_index.is_some() {
                                     app.menu_prev();
                                 } else {
-                                    app.select_prev_container();
+                                    app.scroll_log_left();
                                 }
                             }
-                            app::Tab::Images => {
-                                if app.image_expanded_index.is_some() {
-                                    app.image_menu_prev();
-                                } else {
-                                    app.select_prev_image();
-                                }
-                            }
-                            app::Tab::Deployments => app.select_prev_running_container(),
-                            _ => {}
-                        },
-                        KeyCode::Down | KeyCode::Char('j') => match app.current_tab {
-                            app::Tab::Containers => {
+                            KeyCode::Right | KeyCode::Char('l') => {
                                 if app.expanded_index.is_some() {
                                     app.menu_next();
                                 } else {
-                                    app.select_next_container();
+                                    app.scroll_log_right();
                                 }
                             }
-                            app::Tab::Images => {
-                                if app.image_expanded_index.is_some() {
-                                    app.image_menu_next();
-                                } else {
-                                    app.select_next_image();
+                            KeyCode::Char('e') => {
+                                if app.current_tab == app::Tab::Containers {
+                                    app.open_env_editor();
                                 }
-                            }
-                            app::Tab::Deployments => app.select_next_running_container(),
-                            _ => {}
-                        },
-                        KeyCode::Enter => match app.current_tab {
-                            app::Tab::Containers => {
-                                if app.expanded_index.is_some() {
-                                    app.execute_menu_action().await;
-                                } else {
-                                    app.toggle_expand();
-                                }
-                            }
-                            app::Tab::Images => {
-                                if app.image_expanded_index.is_some() {
-                                    app.execute_image_menu_action().await;
-                                } else {
-                                    app.toggle_image_expand();
-                                }
-                            }
-                            app::Tab::Deployments => {
-                                app.select_running_container();
                             }
                             _ => {}
-                        },
-                        KeyCode::Esc => {
-                            app.expanded_index = None;
-                            app.menu_selection = 0;
-                            app.image_expanded_index = None;
-                            app.image_menu_selection = 0;
                         }
-                        KeyCode::Left | KeyCode::Char('h') => {
-                            if app.expanded_index.is_some() {
-                                app.menu_prev();
-                            } else {
-                                app.scroll_log_left();
-                            }
-                        }
-                        KeyCode::Right | KeyCode::Char('l') => {
-                            if app.expanded_index.is_some() {
-                                app.menu_next();
-                            } else {
-                                app.scroll_log_right();
-                            }
-                        }
-                        _ => {}
                     }
                 }
             }
