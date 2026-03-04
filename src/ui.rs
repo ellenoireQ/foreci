@@ -5,13 +5,10 @@ use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    widgets::{Block, Borders, Cell, List, ListItem, Paragraph, Row, Sparkline, Table, Tabs},
+    widgets::{Block, Borders, Cell, List, ListItem, Paragraph, Row, Sparkline, Table},
 };
 
-use crate::{
-    app::{App, Tab},
-    log::log::LogType,
-};
+use crate::app::{App, Tab};
 
 fn format_bytes(bytes: u64) -> String {
     const KB: u64 = 1024;
@@ -30,68 +27,76 @@ fn format_bytes(bytes: u64) -> String {
 }
 
 pub fn draw_ui(f: &mut Frame, app: &mut App) {
-    let chunks = Layout::default()
+    let root = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),
             Constraint::Min(1),
-            Constraint::Length(6),
+            Constraint::Length(3),
+            Constraint::Length(2),
         ])
         .split(f.area());
 
-    draw_tabs(f, chunks[0], app);
-    draw_content(f, chunks[1], app);
-    draw_footer(f, chunks[2], app);
+    let content = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Length(36),
+            Constraint::Fill(1),
+        ])
+        .split(root[0]);
+
+    let left = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Percentage(34),
+            Constraint::Percentage(33),
+            Constraint::Fill(1),
+        ])
+        .split(content[0]);
+
+    draw_left_containers(f, left[0], app);
+    draw_left_images(f, left[1], app);
+    draw_left_running(f, left[2], app);
+    draw_right_panel(f, content[1], app);
+    draw_logs(f, root[1], app);
+    draw_keybindings(f, root[2]);
 }
 
-fn draw_tabs(f: &mut Frame, area: ratatui::layout::Rect, app: &App) {
-    let titles = vec!["Containers", "Images", "Analytics"];
-
-    let selected = match app.current_tab {
-        Tab::Containers => 0,
-        Tab::Images => 1,
-        Tab::Deployments => 2,
-    };
-
-    let tabs = Tabs::new(titles)
-        .block(
-            Block::default()
-                .border_type(ratatui::widgets::BorderType::Rounded)
-                .borders(Borders::ALL)
-                .title("easydocker"),
-        )
-        .select(selected)
-        .highlight_style(
-            Style::default()
-                .fg(Color::Yellow)
-                .add_modifier(Modifier::BOLD),
-        );
-
-    f.render_widget(tabs, area);
+fn active_border(is_active: bool) -> Style {
+    if is_active {
+        Style::default().fg(Color::Yellow)
+    } else {
+        Style::default().fg(Color::DarkGray)
+    }
 }
 
-fn draw_containers(f: &mut Frame, area: Rect, app: &mut App) {
+fn draw_left_containers(f: &mut Frame, area: Rect, app: &mut App) {
+    let is_active = app.current_tab == Tab::Containers;
+    let border_style = active_border(is_active);
+
     let mut items: Vec<ListItem> = Vec::new();
 
-    if app.loading {
+    if app.loading && is_active {
         items.push(ListItem::new("⏳ Loading..."));
     } else if app.containers.is_empty() {
-        items.push(ListItem::new("No containers. Press 'r' to run a job."));
+        items.push(
+            ListItem::new("(empty)")
+                .style(Style::default().fg(Color::DarkGray)),
+        );
     } else {
-        for (idx, container) in app.containers.clone().iter().enumerate() {
-            let display = format!("🖿 {} [{}]", container.name, container.service);
+        for (idx, container) in app.containers.iter().enumerate() {
+            let display = format!("🖿 {}", container.name);
             items.push(
                 ListItem::new(display).style(
-                    Style::default()
-                        .fg(Color::Cyan)
-                        .add_modifier(Modifier::BOLD),
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
                 ),
             );
             if app.expanded_index == Some(idx) {
-                app.toggle_details();
-                let s = format!("{}", app.details_state.clone());
-                app.log.print_mes(LogType::Info, s.as_str());
-                let menu_items = ["  Build & Start", "  Start", "  Stop", "  Delete Container"];
+                let menu_items = [
+                    "  Build & Start",
+                    "  Start",
+                    "  Stop",
+                    "  Delete Container",
+                ];
                 for (menu_idx, menu_item) in menu_items.iter().enumerate() {
                     let style = if menu_idx == app.menu_selection {
                         Style::default()
@@ -112,132 +117,41 @@ fn draw_containers(f: &mut Frame, area: Rect, app: &mut App) {
                 .bg(Color::DarkGray)
                 .add_modifier(Modifier::BOLD),
         )
-        .block(Block::default().border_type(ratatui::widgets::BorderType::Rounded))
-        .highlight_symbol("→ ");
-    let block = Block::default()
-        .border_type(ratatui::widgets::BorderType::Rounded)
-        .borders(Borders::ALL)
-        .title("Details");
+        .highlight_symbol("→ ")
+        .block(
+            Block::default()
+                .border_type(ratatui::widgets::BorderType::Rounded)
+                .borders(Borders::ALL)
+                .title("Containers")
+                .border_style(border_style),
+        );
 
-    let list_height = if app.expanded_index.is_some() { 10 } else { 6 };
-
-    let main = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Length(list_height), Constraint::Fill(1)])
-        .split(area);
-    let inner = block.inner(main[1]);
-    f.render_stateful_widget(list, main[0], &mut app.container_state);
-    f.render_widget(block, main[1]);
-    match app.container_idx {
-        Some(idx) => {
-            let mans = Layout::default()
-                .direction(Direction::Horizontal)
-                .constraints([Constraint::Fill(1)])
-                .split(inner);
-
-            if app.loading {
-                return;
-            }
-            if let Some(idx) = app.container_idx {
-                if let Some(ctn) = app.containers.get(idx) {
-                    let rows = vec![
-                        Row::new(vec![
-                            Cell::from("Name"),
-                            Cell::from(":"),
-                            Cell::from(ctn.name.clone()),
-                        ]),
-                        Row::new(vec![
-                            Cell::from("Service"),
-                            Cell::from(":"),
-                            Cell::from(ctn.service.clone()),
-                        ]),
-                        Row::new(vec![
-                            Cell::from("Container"),
-                            Cell::from(":"),
-                            Cell::from(ctn.container_name.clone()),
-                        ]),
-                        Row::new(vec![
-                            Cell::from("Hostname"),
-                            Cell::from(":"),
-                            Cell::from(ctn.hostname.clone()),
-                        ]),
-                        Row::new(vec![
-                            Cell::from("Image"),
-                            Cell::from(":"),
-                            Cell::from(ctn.image.clone()),
-                        ]),
-                        Row::new(vec![
-                            Cell::from("Port"),
-                            Cell::from(":"),
-                            Cell::from(ctn.ports.clone()),
-                        ]),
-                        Row::new(vec![
-                            Cell::from("Build Ctx"),
-                            Cell::from(":"),
-                            Cell::from(ctn.build_context.clone()),
-                        ]),
-                        Row::new(vec![
-                            Cell::from("Dockerfile"),
-                            Cell::from(":"),
-                            Cell::from(ctn.dockerfile.clone()),
-                        ]),
-                        Row::new(vec![
-                            Cell::from("Env"),
-                            Cell::from(":"),
-                            Cell::from(ctn.environment.join(", ")),
-                        ]),
-                        Row::new(vec![
-                            Cell::from("Volumes"),
-                            Cell::from(":"),
-                            Cell::from(ctn.volumes.join(", ")),
-                        ]),
-                        Row::new(vec![
-                            Cell::from("Networks"),
-                            Cell::from(":"),
-                            Cell::from(ctn.networks.join(", ")),
-                        ]),
-                        Row::new(vec![
-                            Cell::from("Restart"),
-                            Cell::from(":"),
-                            Cell::from(ctn.restart.clone()),
-                        ]),
-                    ];
-
-                    let widths = [
-                        Constraint::Length(12),
-                        Constraint::Length(2),
-                        Constraint::Fill(1),
-                    ];
-
-                    let table = Table::new(rows, widths).block(Block::default()).widths(&[
-                        Constraint::Length(12),
-                        Constraint::Length(2),
-                        Constraint::Fill(1),
-                    ]);
-
-                    f.render_widget(table, mans[0]);
-                }
-            }
-        }
-        None => {}
+    if is_active {
+        f.render_stateful_widget(list, area, &mut app.container_state);
+    } else {
+        f.render_widget(list, area);
     }
 }
 
-fn draw_images(f: &mut Frame, area: Rect, app: &mut App) {
+fn draw_left_images(f: &mut Frame, area: Rect, app: &mut App) {
+    let is_active = app.current_tab == Tab::Images;
+    let border_style = active_border(is_active);
+
     let mut items: Vec<ListItem> = Vec::new();
 
-    if app.loading {
+    if app.loading && is_active {
         items.push(ListItem::new("⏳ Loading images..."));
     } else if app.images.is_empty() {
-        items.push(ListItem::new("No images found. Press 'r' to refresh."));
+        items.push(
+            ListItem::new("(empty)")
+                .style(Style::default().fg(Color::DarkGray)),
+        );
     } else {
-        for (idx, image) in app.images.clone().iter().enumerate() {
+        for (idx, image) in app.images.iter().enumerate() {
             let display = format!("🐳 {}:{}", image.repository, image.tag);
             items.push(
                 ListItem::new(display).style(
-                    Style::default()
-                        .fg(Color::Cyan)
-                        .add_modifier(Modifier::BOLD),
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
                 ),
             );
             if app.image_expanded_index == Some(idx) {
@@ -260,184 +174,203 @@ fn draw_images(f: &mut Frame, area: Rect, app: &mut App) {
                 .bg(Color::DarkGray)
                 .add_modifier(Modifier::BOLD),
         )
-        .block(Block::default().border_type(ratatui::widgets::BorderType::Rounded))
-        .highlight_symbol("→ ");
+        .highlight_symbol("→ ")
+        .block(
+            Block::default()
+                .border_type(ratatui::widgets::BorderType::Rounded)
+                .borders(Borders::ALL)
+                .title("Images")
+                .border_style(border_style),
+        );
 
-    let block = Block::default()
-        .border_type(ratatui::widgets::BorderType::Rounded)
-        .borders(Borders::ALL)
-        .title("Image Details");
-
-    let list_height = if app.image_expanded_index.is_some() {
-        9
+    if is_active {
+        f.render_stateful_widget(list, area, &mut app.image_state);
     } else {
-        8
-    };
-
-    let main = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Length(list_height), Constraint::Fill(1)])
-        .split(area);
-
-    let inner = block.inner(main[1]);
-    f.render_stateful_widget(list, main[0], &mut app.image_state);
-    f.render_widget(block, main[1]);
-
-    if let Some(idx) = app.image_idx {
-        if let Some(image) = app.images.get(idx) {
-            let rows = vec![
-                Row::new(vec![
-                    Cell::from("Repository"),
-                    Cell::from(":"),
-                    Cell::from(image.repository.clone()),
-                ]),
-                Row::new(vec![
-                    Cell::from("Tag"),
-                    Cell::from(":"),
-                    Cell::from(image.tag.clone()),
-                ]),
-                Row::new(vec![
-                    Cell::from("Image ID"),
-                    Cell::from(":"),
-                    Cell::from(image.image_id.clone()),
-                ]),
-                Row::new(vec![
-                    Cell::from("Created"),
-                    Cell::from(":"),
-                    Cell::from(image.created.clone()),
-                ]),
-                Row::new(vec![
-                    Cell::from("Size"),
-                    Cell::from(":"),
-                    Cell::from(image.size.clone()),
-                ]),
-            ];
-
-            let widths = [
-                Constraint::Length(12),
-                Constraint::Length(2),
-                Constraint::Fill(1),
-            ];
-
-            let table = Table::new(rows, widths).block(Block::default()).widths(&[
-                Constraint::Length(12),
-                Constraint::Length(2),
-                Constraint::Fill(1),
-            ]);
-
-            f.render_widget(table, inner);
-        }
+        f.render_widget(list, area);
     }
 }
-fn sparkline_window(_app: &mut App, width: usize, _scroll: usize) -> Vec<u64> {
-    let len = _app.cpu_data.len();
-    if len == 0 {
-        return vec![];
-    }
 
-    let start = len.saturating_sub(width);
-    _app.cpu_data_as_slice()[start..len].to_vec()
-}
-fn sparkline_mem_window(_app: &mut App, width: usize, _scroll: usize) -> Vec<u64> {
-    let len = _app.mem_data.len();
-    if len == 0 {
-        return vec![];
-    }
+fn draw_left_running(f: &mut Frame, area: Rect, app: &mut App) {
+    let is_active = app.current_tab == Tab::Deployments;
+    let border_style = active_border(is_active);
 
-    let start = len.saturating_sub(width);
-    _app.mem_data_as_slice()[start..len].to_vec()
-}
+    let mut items: Vec<ListItem> = Vec::new();
 
-fn sparkline_net_rx_window(_app: &mut App, width: usize) -> Vec<u64> {
-    let len = _app.net_data.len();
-    if len == 0 {
-        return vec![];
-    }
-
-    let start = len.saturating_sub(width);
-    _app.net_data_as_slice()[start..len]
-        .iter()
-        .map(|n| n.net_rx)
-        .collect()
-}
-
-fn sparkline_net_tx_window(_app: &mut App, width: usize) -> Vec<u64> {
-    let len = _app.net_data.len();
-    if len == 0 {
-        return vec![];
-    }
-
-    let start = len.saturating_sub(width);
-    _app.net_data_as_slice()[start..len]
-        .iter()
-        .map(|n| n.net_tx)
-        .collect()
-}
-
-fn draw_analytics(f: &mut Frame, area: Rect, _app: &mut App) {
-    let main_layout = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Length(30), Constraint::Fill(1)])
-        .split(area);
-    // Left panel
-    let container_block = Block::default()
-        .border_type(ratatui::widgets::BorderType::Rounded)
-        .borders(Borders::ALL)
-        .title("Select Container");
-
-    let mut container_items: Vec<ListItem> = Vec::new();
-
-    if _app.loading {
-        container_items.push(ListItem::new("⏳ Loading..."));
-    } else if _app.running_containers.is_empty() {
-        container_items.push(ListItem::new("No running containers"));
-        container_items.push(ListItem::new("Press 'r' to refresh"));
+    if app.loading && is_active {
+        items.push(ListItem::new("⏳ Loading..."));
+    } else if app.running_containers.is_empty() {
+        items.push(
+            ListItem::new("(none running)")
+                .style(Style::default().fg(Color::DarkGray)),
+        );
     } else {
-        for container in &_app.running_containers {
+        for container in &app.running_containers {
             let name = container
                 .names
                 .first()
                 .map(|n| n.trim_start_matches('/').to_string())
                 .unwrap_or_else(|| container.id.clone());
-
-            let is_selected = _app.selected_container_id.as_ref() == Some(&container.id);
-            let prefix = if is_selected { "● " } else { "  " };
-            let display = format!("{}{}", prefix, name);
-
-            let style = if is_selected {
-                Style::default()
-                    .fg(Color::Green)
-                    .add_modifier(Modifier::BOLD)
+            let is_sel = app.selected_container_id.as_ref() == Some(&container.id);
+            let prefix = if is_sel { "● " } else { "  " };
+            let style = if is_sel {
+                Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)
             } else {
                 Style::default().fg(Color::Cyan)
             };
-
-            container_items.push(ListItem::new(display).style(style));
+            items.push(ListItem::new(format!("{}{}", prefix, name)).style(style));
         }
     }
 
-    let container_list = List::new(container_items)
+    let list = List::new(items)
         .highlight_style(
             Style::default()
                 .bg(Color::DarkGray)
                 .add_modifier(Modifier::BOLD),
         )
-        .block(container_block)
-        .highlight_symbol("→ ");
+        .highlight_symbol("→ ")
+        .block(
+            Block::default()
+                .border_type(ratatui::widgets::BorderType::Rounded)
+                .borders(Borders::ALL)
+                .title("Running")
+                .border_style(border_style),
+        );
 
-    f.render_stateful_widget(
-        container_list,
-        main_layout[0],
-        &mut _app.running_container_state,
+    if is_active {
+        f.render_stateful_widget(list, area, &mut app.running_container_state);
+    } else {
+        f.render_widget(list, area);
+    }
+}
+
+fn draw_right_panel(f: &mut Frame, area: Rect, app: &mut App) {
+    match app.current_tab {
+        Tab::Containers => draw_container_detail(f, area, app),
+        Tab::Images => draw_image_detail(f, area, app),
+        Tab::Deployments => draw_analytics(f, area, app),
+    }
+}
+
+fn draw_container_detail(f: &mut Frame, area: Rect, app: &mut App) {
+    let block = Block::default()
+        .border_type(ratatui::widgets::BorderType::Rounded)
+        .borders(Borders::ALL)
+        .title("Details")
+        .border_style(Style::default().fg(Color::Yellow));
+    let inner = block.inner(area);
+    f.render_widget(block, area);
+
+    if app.loading {
+        f.render_widget(Paragraph::new("⏳ Loading..."), inner);
+        return;
+    }
+
+    if let Some(idx) = app.container_idx {
+        if let Some(ctn) = app.containers.get(idx) {
+            let rows = vec![
+                Row::new(vec![Cell::from("Name"),       Cell::from(":"), Cell::from(ctn.name.clone())]),
+                Row::new(vec![Cell::from("Service"),    Cell::from(":"), Cell::from(ctn.service.clone())]),
+                Row::new(vec![Cell::from("Container"),  Cell::from(":"), Cell::from(ctn.container_name.clone())]),
+                Row::new(vec![Cell::from("Hostname"),   Cell::from(":"), Cell::from(ctn.hostname.clone())]),
+                Row::new(vec![Cell::from("Image"),      Cell::from(":"), Cell::from(ctn.image.clone())]),
+                Row::new(vec![Cell::from("Port"),       Cell::from(":"), Cell::from(ctn.ports.clone())]),
+                Row::new(vec![Cell::from("Build Ctx"),  Cell::from(":"), Cell::from(ctn.build_context.clone())]),
+                Row::new(vec![Cell::from("Dockerfile"), Cell::from(":"), Cell::from(ctn.dockerfile.clone())]),
+                Row::new(vec![Cell::from("Env"),        Cell::from(":"), Cell::from(ctn.environment.join(", "))]),
+                Row::new(vec![Cell::from("Volumes"),    Cell::from(":"), Cell::from(ctn.volumes.join(", "))]),
+                Row::new(vec![Cell::from("Networks"),   Cell::from(":"), Cell::from(ctn.networks.join(", "))]),
+                Row::new(vec![Cell::from("Restart"),    Cell::from(":"), Cell::from(ctn.restart.clone())]),
+            ];
+            let table = Table::new(rows, &[
+                Constraint::Length(12),
+                Constraint::Length(2),
+                Constraint::Fill(1),
+            ]);
+            f.render_widget(table, inner);
+            return;
+        }
+    }
+
+    f.render_widget(
+        Paragraph::new("Select a container on the left.")
+            .style(Style::default().fg(Color::DarkGray)),
+        inner,
     );
+}
 
-    // Right panel
-    let charts_area = main_layout[1];
+fn draw_image_detail(f: &mut Frame, area: Rect, app: &mut App) {
+    let block = Block::default()
+        .border_type(ratatui::widgets::BorderType::Rounded)
+        .borders(Borders::ALL)
+        .title("Image Details")
+        .border_style(Style::default().fg(Color::Yellow));
+    let inner = block.inner(area);
+    f.render_widget(block, area);
 
+    if app.loading {
+        f.render_widget(Paragraph::new("⏳ Loading..."), inner);
+        return;
+    }
+
+    if let Some(idx) = app.image_idx {
+        if let Some(image) = app.images.get(idx) {
+            let rows = vec![
+                Row::new(vec![Cell::from("Repository"), Cell::from(":"), Cell::from(image.repository.clone())]),
+                Row::new(vec![Cell::from("Tag"),        Cell::from(":"), Cell::from(image.tag.clone())]),
+                Row::new(vec![Cell::from("Image ID"),   Cell::from(":"), Cell::from(image.image_id.clone())]),
+                Row::new(vec![Cell::from("Created"),    Cell::from(":"), Cell::from(image.created.clone())]),
+                Row::new(vec![Cell::from("Size"),       Cell::from(":"), Cell::from(image.size.clone())]),
+            ];
+            let table = Table::new(rows, &[
+                Constraint::Length(12),
+                Constraint::Length(2),
+                Constraint::Fill(1),
+            ]);
+            f.render_widget(table, inner);
+            return;
+        }
+    }
+
+    f.render_widget(
+        Paragraph::new("Select an image on the left.")
+            .style(Style::default().fg(Color::DarkGray)),
+        inner,
+    );
+}
+
+fn sparkline_window(app: &mut App, width: usize) -> Vec<u64> {
+    let len = app.cpu_data.len();
+    if len == 0 { return vec![]; }
+    let start = len.saturating_sub(width);
+    app.cpu_data_as_slice()[start..len].to_vec()
+}
+
+fn sparkline_mem_window(app: &mut App, width: usize) -> Vec<u64> {
+    let len = app.mem_data.len();
+    if len == 0 { return vec![]; }
+    let start = len.saturating_sub(width);
+    app.mem_data_as_slice()[start..len].to_vec()
+}
+
+fn sparkline_net_rx_window(app: &mut App, width: usize) -> Vec<u64> {
+    let len = app.net_data.len();
+    if len == 0 { return vec![]; }
+    let start = len.saturating_sub(width);
+    app.net_data_as_slice()[start..len].iter().map(|n| n.net_rx).collect()
+}
+
+fn sparkline_net_tx_window(app: &mut App, width: usize) -> Vec<u64> {
+    let len = app.net_data.len();
+    if len == 0 { return vec![]; }
+    let start = len.saturating_sub(width);
+    app.net_data_as_slice()[start..len].iter().map(|n| n.net_tx).collect()
+}
+
+fn draw_analytics(f: &mut Frame, area: Rect, app: &mut App) {
     let rows = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-        .split(charts_area);
+        .split(area);
 
     let top_cols = Layout::default()
         .direction(Direction::Horizontal)
@@ -449,170 +382,90 @@ fn draw_analytics(f: &mut Frame, area: Rect, _app: &mut App) {
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(rows[1]);
 
-    // CPU Usage with percentage
-    let cpu_percent = _app.analytics.cpu_percent;
-    let cpu_title = format!("CPU Usage - {:.2}%", cpu_percent);
-    let top_left_block = Block::default()
+    // CPU
+    let cpu_block = Block::default()
         .border_type(ratatui::widgets::BorderType::Rounded)
         .borders(Borders::ALL)
-        .title(cpu_title);
-
-    _app.update_cpu_scroll();
-    let values = sparkline_window(
-        _app,
-        top_left_block.inner(top_cols[0]).width as usize,
-        _app.scroll_offset,
-    );
-
-    let max_val = values.iter().copied().max().unwrap_or(10).max(10);
-
+        .title(format!("CPU Usage - {:.2}%", app.analytics.cpu_percent));
+    app.update_cpu_scroll();
+    let cpu_vals = sparkline_window(app, cpu_block.inner(top_cols[0]).width as usize);
+    let cpu_max = cpu_vals.iter().copied().max().unwrap_or(10).max(10);
     let cpu_sparkline = Sparkline::default()
-        .block(Block::default())
-        .data(&values)
-        .max(max_val)
+        .data(&cpu_vals).max(cpu_max)
         .style(Style::default().fg(Color::Green));
+    f.render_widget(cpu_block.clone(), top_cols[0]);
+    f.render_widget(cpu_sparkline, cpu_block.inner(top_cols[0]));
 
-    f.render_widget(top_left_block.clone(), top_cols[0]);
-    f.render_widget(cpu_sparkline, top_left_block.inner(top_cols[0]));
-
-    // Memory Usage with percentage
-    let mem_percent = _app.analytics.mem_percent;
-    let mem_title = format!("Memory Usage - {:.2}%", mem_percent);
-    let top_right_block = Block::default()
+    // Memory
+    let mem_block = Block::default()
         .border_type(ratatui::widgets::BorderType::Rounded)
         .borders(Borders::ALL)
-        .title(mem_title);
-
-    let values_mem = sparkline_mem_window(
-        _app,
-        top_right_block.inner(top_cols[1]).width as usize,
-        _app.scroll_offset,
-    );
-    let max_vals = values_mem.iter().copied().max().unwrap_or(10).max(10);
-
+        .title(format!("Memory Usage - {:.2}%", app.analytics.mem_percent));
+    let mem_vals = sparkline_mem_window(app, mem_block.inner(top_cols[1]).width as usize);
+    let mem_max = mem_vals.iter().copied().max().unwrap_or(10).max(10);
     let mem_sparkline = Sparkline::default()
-        .block(Block::default())
-        .data(&values_mem)
-        .max(max_vals)
-        .style(Style::default().fg(Color::Green));
+        .data(&mem_vals).max(mem_max)
+        .style(Style::default().fg(Color::Magenta));
+    f.render_widget(mem_block.clone(), top_cols[1]);
+    f.render_widget(mem_sparkline, mem_block.inner(top_cols[1]));
 
-    f.render_widget(top_right_block.clone(), top_cols[1]);
-    f.render_widget(mem_sparkline, top_right_block.inner(top_cols[1]));
-
-    // Network I/O with current values
-    let net_rx = _app.analytics.net_rx;
-    let net_tx = _app.analytics.net_tx;
-    let net_title = format!(
-        "Network I/O - ↑{} ↓{}",
-        format_bytes(net_tx),
-        format_bytes(net_rx)
-    );
-    let bottom_left_block = Block::default()
+    // Network I/O
+    let net_block = Block::default()
         .border_type(ratatui::widgets::BorderType::Rounded)
         .borders(Borders::ALL)
-        .title(net_title);
-
-    let network_row = Layout::default()
+        .title(format!(
+            "Network I/O - ↑{} ↓{}",
+            format_bytes(app.analytics.net_tx),
+            format_bytes(app.analytics.net_rx),
+        ));
+    let net_inner = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-        .split(bottom_left_block.inner(bottom_cols[0]));
+        .split(net_block.inner(bottom_cols[0]));
 
-    let values_tx = sparkline_net_tx_window(_app, network_row[0].width as usize);
-    let max_tx = values_tx.iter().copied().max().unwrap_or(1024).max(1024);
+    let vtx = sparkline_net_tx_window(app, net_inner[0].width as usize);
+    let vrx = sparkline_net_rx_window(app, net_inner[1].width as usize);
+    let ctx = app.net_data_as_slice().last().map(|n| n.net_tx).unwrap_or(0);
+    let crx = app.net_data_as_slice().last().map(|n| n.net_rx).unwrap_or(0);
 
-    let values_rx = sparkline_net_rx_window(_app, network_row[1].width as usize);
-    let max_rx = values_rx.iter().copied().max().unwrap_or(1024).max(1024);
-
-    // Get current rate for display
-    let current_tx = _app
-        .net_data_as_slice()
-        .last()
-        .map(|n| n.net_tx)
-        .unwrap_or(0);
-    let current_rx = _app
-        .net_data_as_slice()
-        .last()
-        .map(|n| n.net_rx)
-        .unwrap_or(0);
-    let tx_title = format!("Upload - {}/s", format_bytes(current_tx * 100)); // *100 to reverse scaling
-    let rx_title = format!("Download - {}/s", format_bytes(current_rx * 100));
-
-    let upload_sparkline = Sparkline::default()
-        .block(Block::default().borders(Borders::ALL).title(tx_title))
-        .data(&values_tx)
-        .max(max_tx)
+    let upload = Sparkline::default()
+        .block(Block::default().borders(Borders::ALL)
+            .title(format!("↑ {}/s", format_bytes(ctx * 100))))
+        .data(&vtx).max(vtx.iter().copied().max().unwrap_or(1024).max(1024))
         .style(Style::default().fg(Color::Cyan));
-    let download_sparkline = Sparkline::default()
-        .block(Block::default().borders(Borders::ALL).title(rx_title))
-        .data(&values_rx)
-        .max(max_rx)
+    let download = Sparkline::default()
+        .block(Block::default().borders(Borders::ALL)
+            .title(format!("↓ {}/s", format_bytes(crx * 100))))
+        .data(&vrx).max(vrx.iter().copied().max().unwrap_or(1024).max(1024))
         .style(Style::default().fg(Color::Yellow));
 
-    f.render_widget(bottom_left_block.clone(), bottom_cols[0]);
-    f.render_widget(upload_sparkline, network_row[0]);
-    f.render_widget(download_sparkline, network_row[1]);
+    f.render_widget(net_block.clone(), bottom_cols[0]);
+    f.render_widget(upload, net_inner[0]);
+    f.render_widget(download, net_inner[1]);
 
-    let bottom_right_block = Block::default()
+    // Disk Usage
+    let disk_block = Block::default()
         .border_type(ratatui::widgets::BorderType::Rounded)
         .borders(Borders::ALL)
         .title("Disk Usage");
-
-    let disk_content = format!(
-        "Images: {}\nContainers: {}\nVolumes: {}\nBuild Cache: {}\nTotal: {}",
-        format_bytes(_app.analytics.disk_images),
-        format_bytes(_app.analytics.disk_containers),
-        format_bytes(_app.analytics.disk_volumes),
-        format_bytes(_app.analytics.disk_build_cache),
-        format_bytes(_app.analytics.disk_total)
+    let disk_inner = disk_block.inner(bottom_cols[1]);
+    let disk_text = format!(
+        "Images:      {}\nContainers:  {}\nVolumes:     {}\nBuild Cache: {}\nTotal:       {}",
+        format_bytes(app.analytics.disk_images),
+        format_bytes(app.analytics.disk_containers),
+        format_bytes(app.analytics.disk_volumes),
+        format_bytes(app.analytics.disk_build_cache),
+        format_bytes(app.analytics.disk_total),
     );
-
-    let bottom_right_content = Paragraph::new(disk_content)
-        .block(Block::default())
-        .style(Style::default().fg(Color::Magenta));
-    f.render_widget(bottom_right_block.clone(), bottom_cols[1]);
+    f.render_widget(disk_block, bottom_cols[1]);
     f.render_widget(
-        bottom_right_content,
-        bottom_right_block.inner(bottom_cols[1]),
+        Paragraph::new(disk_text).style(Style::default().fg(Color::Magenta)),
+        disk_inner,
     );
 }
 
-fn draw_content(f: &mut Frame, area: ratatui::layout::Rect, app: &mut App) {
-    let title = match app.current_tab {
-        Tab::Containers => "Containers",
-        Tab::Images => "Images",
-        Tab::Deployments => "Analytics",
-    };
-
-    let block = Block::default()
-        .border_type(ratatui::widgets::BorderType::Rounded)
-        .borders(Borders::ALL)
-        .title(title);
-
-    f.render_widget(block.clone(), area);
-
-    let inner = block.inner(area);
-
-    match app.current_tab {
-        Tab::Containers => draw_containers(f, inner, app),
-        Tab::Images => draw_images(f, inner, app),
-        Tab::Deployments => draw_analytics(f, inner, app),
-    }
-}
-
-fn draw_footer(f: &mut Frame, area: ratatui::layout::Rect, app: &mut App) {
-    let rows_column = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Length(3), Constraint::Length(3)])
-        .split(area);
-
-    let footer = Paragraph::new(
-        "q: Quit | r: Refresh | Tab/Shift+Tab: Switch Tab | ↑↓: Navigate | Enter: Open Menu | Esc: Close Menu | ←→: Scroll logs",
-    )
-    .block(Block::default().borders(Borders::NONE))
-    .centered();
-
-    let footersc_title = app.log.to_display_string();
-    let footer1 = Paragraph::new(footersc_title)
+fn draw_logs(f: &mut Frame, area: Rect, app: &mut App) {
+    let para = Paragraph::new(app.log.to_display_string())
         .block(
             Block::default()
                 .border_type(ratatui::widgets::BorderType::Rounded)
@@ -620,7 +473,15 @@ fn draw_footer(f: &mut Frame, area: ratatui::layout::Rect, app: &mut App) {
                 .title("Logs"),
         )
         .scroll((0, app.log_scroll));
+    f.render_widget(para, area);
+}
 
-    f.render_widget(footer, rows_column[1]);
-    f.render_widget(footer1, rows_column[0]);
+fn draw_keybindings(f: &mut Frame, area: Rect) {
+    let text = " q: Quit  r: Refresh  Tab/Shift+Tab: Switch Panel  ↑↓: Navigate  Enter: Menu  Esc: Close  ←→: Scroll logs";
+    f.render_widget(
+        Paragraph::new(text)
+            .style(Style::default().fg(Color::DarkGray))
+            .centered(),
+        area,
+    );
 }
