@@ -10,6 +10,20 @@ A continuous integration tool designed for easy integration with docker build sy
 ![macOS](https://img.shields.io/badge/macOS-10.15%2B-black.svg?style=for-the-badge&logo=apple&logoColor=white)
 ![Windows](https://img.shields.io/badge/windows-10%2B-%230078D6.svg?style=for-the-badge&logo=windows&logoColor=white)
 
+## Table of Contents
+
+- [How it works?](#how-it-works)
+- [Features](#features)
+- [Preview](#preview)
+- [Installation](#installation)
+  - [Linux / macOS](#linux--macos)
+  - [Windows](#windows)
+- [Usage](#usage)
+- [Independent build](#independent-build)
+- [Keybindings](#keybindings)
+- [Tabs](#tabs)
+- [License](#license)
+
 ## How it works?
 Will scanning all directory in workspace, if found docker-compose.yml will be listed, then after listed up will load informations about containers, images, and analytics.
 
