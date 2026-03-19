@@ -111,4 +111,4 @@ make build-rust
 
 ## License
 
-MIT License - Fitrian Musya 2026
+MIT License
